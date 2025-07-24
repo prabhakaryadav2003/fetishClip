@@ -5,10 +5,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-if (!process.env.POSTGRES_URL) {
-  throw new Error("POSTGRES_URL environment variable is not set");
-}
-
 export const client = postgres({
   host: process.env.POSTGRES_HOST,
   port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : 5432,
