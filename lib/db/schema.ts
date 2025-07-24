@@ -33,6 +33,9 @@ export const videos = pgTable("videos", {
   description: text("description"),
   url: text("url").notNull(),
   thumbnail: text("thumbnail"),
+  uploaderId: integer("uploader_id")
+    .notNull()
+    .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -58,14 +61,23 @@ export enum ActivityType {
   SUBSCRIBE = "SUBSCRIBE",
   UNSUBSCRIBE = "UNSUBSCRIBE",
   PAYMENT_FAILED = "PAYMENT_FAILED",
+  ADD_VIDEO = "ADD_VIDEO",
 }
 
 export const usersRelations = relations(users, ({ many }) => ({
   activityLogs: many(activityLogs),
+  videos: many(videos, {
+    relationName: "videos_uploaded",
+  }),
 }));
 
-export const videosRelations = relations(videos, ({}) => ({}));
-//Future use
+export const videosRelations = relations(videos, ({ one }) => ({
+  uploader: one(users, {
+    fields: [videos.uploaderId],
+    references: [users.id],
+    relationName: "uploader",
+  }),
+}));
 
 export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   user: one(users, {
