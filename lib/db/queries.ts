@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from "drizzle-orm";
 import { db } from "./drizzle";
-import { activityLogs, users } from "./schema";
+import { activityLogs, users, videos } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 
@@ -38,6 +38,24 @@ export async function getUserByStripeCustomerId(customerId: string) {
   return result.length > 0 ? result[0] : null;
 }
 
+export async function getUserById(userId: number) {
+  const user = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+    .limit(1);
+  return user.length === 0 ? null : user[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return result[0] ?? null;
+}
+
 // Update user's subscription fields
 export async function updateUserSubscription(
   userId: number,
@@ -57,14 +75,41 @@ export async function updateUserSubscription(
     .where(eq(users.id, userId));
 }
 
-// Get full user record
-export async function getUserById(userId: number) {
-  const user = await db
+// List all videos
+export async function getAllVideos() {
+  return db.select().from(videos).orderBy(desc(videos.createdAt));
+}
+
+// List videos from a specific creator
+export async function getVideosByCreator(creatorId: number) {
+  return db
     .select()
-    .from(users)
-    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+    .from(videos)
+    .where(eq(videos.uploaderId, creatorId))
+    .orderBy(desc(videos.createdAt));
+}
+
+export async function getVideoById(videoId: string) {
+  const result = await db
+    .select()
+    .from(videos)
+    .where(eq(videos.id, videoId))
     .limit(1);
-  return user.length === 0 ? null : user[0];
+  return result[0] ?? null;
+}
+
+export async function insertVideo(data: {
+  title: string;
+  description?: string;
+  url: string;
+  thumbnail?: string;
+  uploaderId: number;
+}) {
+  return db.insert(videos).values(data);
+}
+
+export async function deleteVideo(videoId: string) {
+  return db.delete(videos).where(eq(videos.id, videoId));
 }
 
 // Get activity logs for the current user
@@ -85,6 +130,28 @@ export async function getActivityLogs() {
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
     .where(eq(activityLogs.userId, user.id))
+    .orderBy(desc(activityLogs.timestamp))
+    .limit(10);
+}
+
+export async function insertActivityLog(data: {
+  userId: number;
+  action: string;
+  ipAddress?: string;
+}) {
+  return db.insert(activityLogs).values(data);
+}
+
+export async function findActivityLogsByUser(userId: number) {
+  return db
+    .select({
+      id: activityLogs.id,
+      action: activityLogs.action,
+      timestamp: activityLogs.timestamp,
+      ipAddress: activityLogs.ipAddress,
+    })
+    .from(activityLogs)
+    .where(eq(activityLogs.userId, userId))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
 }

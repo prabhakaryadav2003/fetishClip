@@ -1,8 +1,15 @@
 import { z } from "zod";
-import { getUser } from "@/lib/db/queries";
+import {
+  getUser,
+  getAllVideos,
+  getVideosByCreator,
+  getVideoById,
+  insertVideo,
+  deleteVideo,
+} from "@/lib/db/queries";
 import { redirect } from "next/navigation";
+import type { User } from "@/lib/db/schema";
 
-// --- Action state type ---
 export type ActionState = {
   error?: string;
   success?: string;
@@ -26,8 +33,6 @@ export function validatedAction<S extends z.ZodTypeAny, T>(
     return action(parsed.data, formData);
   };
 }
-
-import type { User } from "@/lib/db/schema";
 
 type ValidatedActionWithUserFunction<S extends z.ZodTypeAny, T> = (
   data: z.infer<S>,
@@ -88,4 +93,60 @@ export function validatedActionWithActiveUser<S extends z.ZodTypeAny, T>(
     }
     return action(parsed.data, formData, user);
   };
+}
+
+// Check if a user is a creator
+export function isCreator(user: User) {
+  return user.role === "creator" || user.role === "admin";
+}
+
+// Check if a user has an active subscription
+export function isActiveSubscriber(user: User) {
+  return user.subscriptionStatus === "active";
+}
+
+// List all videos (for public or active subscriber)
+export async function listAllVideosAction() {
+  const user = await getUser();
+  if (!user || !isActiveSubscriber(user)) redirect("/subscribe");
+  return getAllVideos();
+}
+
+// List uploaded videos (for creators)
+export async function listMyVideosAction() {
+  const user = await getUser();
+  if (!user || !isCreator(user)) redirect("/not-authorized");
+  return getVideosByCreator(user.id);
+}
+
+// Add video
+export async function addVideoAction(data: {
+  title: string;
+  description?: string;
+  url: string;
+  thumbnail?: string;
+}) {
+  const user = await getUser();
+  if (!user || !isCreator(user)) redirect("/not-authorized");
+  await insertVideo({ ...data, uploaderId: user.id });
+}
+
+// Delete video
+export async function deleteVideoAction(videoId: string) {
+  const user = await getUser();
+  const video = await getVideoById(videoId);
+  if (!video) throw new Error("Video not found");
+  if (!user || (video.uploaderId !== user.id && user.role !== "admin"))
+    redirect("/not-authorized");
+  await deleteVideo(videoId);
+}
+
+// Watch video
+export async function watchVideoAction(videoId: string) {
+  const user = await getUser();
+  if (!user || !isActiveSubscriber(user)) redirect("/subscribe");
+  const video = await getVideoById(videoId);
+  if (!video) throw new Error("Video not found");
+  // (log the watch event here)
+  return video;
 }
