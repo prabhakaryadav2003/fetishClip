@@ -4,6 +4,40 @@ import { activityLogs, users, videos } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 
+export async function deleteUser(userId: number) {
+  const user = await getUserById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  await db
+    .update(users)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+      email: `${user.email}-${user.id}-deleted`,
+    })
+    .where(eq(users.id, userId));
+
+  await db.delete(videos).where(eq(videos.uploaderId, userId));
+  await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
+}
+
+export async function createUser(data: {
+  email: string;
+  passwordHash: string;
+  role?: string;
+}) {
+  const { email, passwordHash, role = "viewer" } = data;
+  return db.insert(users).values({
+    email,
+    passwordHash,
+    role,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
 // Get the current authenticated user
 export async function getUser() {
   const sessionCookie = (await cookies()).get("session");
@@ -54,6 +88,32 @@ export async function getUserByEmail(email: string) {
     .where(eq(users.email, email))
     .limit(1);
   return result[0] ?? null;
+}
+
+export async function changeUserPassword(
+  userId: number,
+  newPasswordHash: string
+) {
+  await db
+    .update(users)
+    .set({
+      passwordHash: newPasswordHash,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+}
+
+// Update user's account information
+export async function updateUserAccount(
+  userId: number,
+  data: { name?: string; email?: string }
+) {
+  const { name, email } = data;
+  const updates: any = { updatedAt: new Date() };
+  if (name) updates.name = name;
+  if (email) updates.email = email;
+
+  await db.update(users).set(updates).where(eq(users.id, userId));
 }
 
 // Update user's subscription fields

@@ -1,35 +1,32 @@
-'use client';
+"use client";
 
-import { useActionState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { updateAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
-import useSWR from 'swr';
-import { Suspense } from 'react';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { updateAccount } from "@/app/(login)/actions";
+import useSWR from "swr";
 
 type ActionState = {
   name?: string;
+  email?: string;
   error?: string;
   success?: string;
 };
 
-type AccountFormProps = {
-  state: ActionState;
-  nameValue?: string;
-  emailValue?: string;
-};
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function AccountForm({
   state,
-  nameValue = '',
-  emailValue = ''
-}: AccountFormProps) {
+  nameValue = "",
+  emailValue = "",
+}: {
+  state: ActionState;
+  nameValue?: string;
+  emailValue?: string;
+}) {
   return (
     <>
       <div>
@@ -40,7 +37,7 @@ function AccountForm({
           id="name"
           name="name"
           placeholder="Enter your name"
-          defaultValue={state.name || nameValue}
+          defaultValue={state.name ?? nameValue}
           required
         />
       </div>
@@ -53,7 +50,7 @@ function AccountForm({
           name="email"
           type="email"
           placeholder="Enter your email"
-          defaultValue={emailValue}
+          defaultValue={state.email ?? emailValue}
           required
         />
       </div>
@@ -61,18 +58,11 @@ function AccountForm({
   );
 }
 
-function AccountFormWithData({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
-  return (
-    <AccountForm
-      state={state}
-      nameValue={user?.name ?? ''}
-      emailValue={user?.email ?? ''}
-    />
-  );
-}
-
 export default function GeneralPage() {
+  // SWR fetches the current user info for field pre-fill (cache key can be anything, e.g. '/api/user')
+  const { data: user, isLoading } = useSWR("/api/user", fetcher);
+
+  // useActionState lets you run async server actions for <form action={formAction}>
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
     {}
@@ -83,16 +73,21 @@ export default function GeneralPage() {
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
-
       <Card>
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" action={formAction}>
-            <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} />
-            </Suspense>
+            {isLoading ? (
+              <div className="text-gray-400">Loading...</div>
+            ) : (
+              <AccountForm
+                state={state}
+                nameValue={user?.name ?? ""}
+                emailValue={user?.email ?? ""}
+              />
+            )}
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
             )}
@@ -110,7 +105,7 @@ export default function GeneralPage() {
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </Button>
           </form>
