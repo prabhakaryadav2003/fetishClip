@@ -9,21 +9,41 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-// Users Table
+// USERS TABLE
 export const users = pgTable("users", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 100 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 20 }).notNull().default("viewer"),
-  stripeCustomerId: text("stripe_customer_id").unique(),
-  stripeSubscriptionId: text("stripe_subscription_id").unique(),
-  stripeProductId: text("stripe_product_id"),
-  planName: varchar("plan_name", { length: 50 }),
-  subscriptionStatus: varchar("subscription_status", { length: 20 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
+});
+
+// PLANS TABLE
+export const plans = pgTable("plans", {
+  id: serial("id").primaryKey(),
+  paypalPlanId: text("paypal_plan_id").notNull(),
+  name: text("name").notNull(),
+  price: text("price").notNull(), // Fixed field name
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// SUBSCRIPTIONS TABLE
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  paypalSubscriptionId: text("paypal_subscription_id").notNull(),
+  planId: integer("plan_id")
+    .notNull()
+    .references(() => plans.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  startTime: timestamp("start_time"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Videos Table
@@ -66,8 +86,24 @@ export enum ActivityType {
 
 export const usersRelations = relations(users, ({ many }) => ({
   activityLogs: many(activityLogs),
+  subscriptions: many(subscriptions),
   videos: many(videos, {
     relationName: "videos_uploaded",
+  }),
+}));
+
+export const planRelations = relations(plans, ({ many }) => ({
+  subscriptions: many(subscriptions),
+}));
+
+export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  plan: one(plans, {
+    fields: [subscriptions.planId],
+    references: [plans.id],
   }),
 }));
 
@@ -91,6 +127,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Video = typeof videos.$inferSelect;
 export type NewVideo = typeof videos.$inferInsert;
+
+export type Plans = typeof plans.$inferSelect;
+export type NewPlans = typeof plans.$inferInsert;
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;

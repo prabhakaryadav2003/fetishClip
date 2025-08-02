@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from "drizzle-orm";
 import { db } from "./drizzle";
-import { activityLogs, users, videos } from "./schema";
+import { activityLogs, users, videos, plans, subscriptions } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 
@@ -60,16 +60,6 @@ export async function getUser() {
     .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
     .limit(1);
   return user.length === 0 ? null : user[0];
-}
-
-// Get user by Stripe customer ID
-export async function getUserByStripeCustomerId(customerId: string) {
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.stripeCustomerId, customerId))
-    .limit(1);
-  return result.length > 0 ? result[0] : null;
 }
 
 export async function getUserById(userId: number) {
@@ -214,4 +204,43 @@ export async function findActivityLogsByUser(userId: number) {
     .where(eq(activityLogs.userId, userId))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
+}
+
+export async function getAllPlans() {
+  return await db.select().from(plans);
+}
+
+export async function savePlanToDB({
+  name,
+  description,
+  paypalPlanId,
+  price,
+}: {
+  name: string;
+  description: string;
+  paypalPlanId: string;
+  price: string;
+}) {
+  return db.insert(plans).values({ name, description, paypalPlanId, price });
+}
+
+export async function updateSubscription({
+  userId,
+  paypalSubscriptionId,
+  paypalPlanId,
+  startTime,
+}: {
+  userId: string;
+  paypalSubscriptionId: string;
+  paypalPlanId: string | number;
+  startTime: string | Date;
+}) {
+  return db.insert(subscriptions).values({
+    userId,
+    paypalSubscriptionId,
+    planId:
+      typeof paypalPlanId === "string" ? parseInt(paypalPlanId) : paypalPlanId,
+    status: "ACTIVE",
+    startTime: new Date(startTime),
+  });
 }

@@ -1,43 +1,8 @@
-import { stripe } from "../payments/stripe";
 import { db } from "./drizzle";
-import { users } from "./schema";
+import { users, plans } from "./schema";
 import { hashPassword } from "@/lib/auth/session";
-
-async function createStripeProducts() {
-  console.log("Creating Stripe products and prices...");
-
-  const baseProduct = await stripe.products.create({
-    name: "Base",
-    description: "Base subscription plan",
-  });
-
-  await stripe.prices.create({
-    product: baseProduct.id,
-    unit_amount: 800,
-    currency: "usd",
-    recurring: {
-      interval: "month",
-      trial_period_days: 7,
-    },
-  });
-
-  const plusProduct = await stripe.products.create({
-    name: "Plus",
-    description: "Plus subscription plan",
-  });
-
-  await stripe.prices.create({
-    product: plusProduct.id,
-    unit_amount: 1200,
-    currency: "usd",
-    recurring: {
-      interval: "month",
-      trial_period_days: 7,
-    },
-  });
-
-  console.log("Stripe products and prices created successfully.");
-}
+import { createPayPalPlan } from "@/lib/payments/createPlan";
+import { createPayPalProduct } from "@/lib/payments/createProductId";
 
 async function seed() {
   const email = "test@test.com";
@@ -57,7 +22,42 @@ async function seed() {
 
   console.log("Initial user created:", user);
 
-  await createStripeProducts();
+  console.log("Seeding PayPal product and plans...");
+
+  // Create PayPal Product
+  const productId = await createPayPalProduct({
+    name: "Video Content Platform",
+    description: "Subscription to premium video streaming service",
+  });
+  console.log("Product created:", productId);
+
+  // Create PayPal Plans
+  const planConfigs = [
+    { name: "Monthly Plan", description: "Billed monthly", price: "9.99" },
+    { name: "Annual Plan", description: "Billed yearly", price: "99.99" },
+  ];
+
+  for (const config of planConfigs) {
+    const paypalPlanId = await createPayPalPlan(
+      config.name,
+      config.description,
+      config.price,
+      productId
+    );
+
+    await db.insert(plans).values({
+      name: config.name,
+      description: config.description,
+      price: config.price,
+      paypalPlanId,
+    });
+
+    console.log(
+      `Plan "${config.name}" created with PayPal ID: ${paypalPlanId}`
+    );
+  }
+
+  console.log("Seeding completed!");
 }
 
 seed()

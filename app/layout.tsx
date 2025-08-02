@@ -3,10 +3,11 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { getUser, getAllVideos } from "@/lib/db/queries";
 import { SWRConfig } from "swr";
+import favicon from "@/public/images/favicon.ico";
 
 export const metadata: Metadata = {
-  title: "Next.js SaaS Starter",
-  description: "Get started quickly with Next.js, Postgres, and Stripe.",
+  title: "FetishClip | BDSM, Fetish, and Kink Video Platform",
+  description: "Fetish Content Platform for BDSM, Fetish, and Kink Videos",
 };
 
 export const viewport: Viewport = {
@@ -25,6 +26,10 @@ export default function RootLayout({
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href={favicon.src} />
+      </head>
       <body className="min-h-[100dvh] bg-gray-50">
         <SWRConfig
           value={{

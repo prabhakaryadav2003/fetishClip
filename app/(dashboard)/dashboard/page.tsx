@@ -3,7 +3,6 @@
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { customerPortalAction } from "@/lib/payments/actions";
 import { Loader2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -43,7 +42,7 @@ export default function SettingsPage() {
                   ? "Trial period"
                   : "No active subscription"}
             </p>
-            <form action={customerPortalAction} className="mt-4 flex">
+            <form action={""} className="mt-4 flex">
               <Button type="submit" variant="outline">
                 Manage Billing
               </Button>
