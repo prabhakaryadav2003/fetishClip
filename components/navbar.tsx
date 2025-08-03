@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import UserMenu from "@/components/userMenu";
+import UserMenu from "@/components/UserMenu";
 import { Dot, Key, Menu, X } from "lucide-react";
 import Logo from "@/public/images/logo.png";
 import { Suspense } from "react";

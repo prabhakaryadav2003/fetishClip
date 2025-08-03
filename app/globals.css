@@ -193,6 +193,10 @@
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
   --radius: 0.6rem;
+  --plyr-color-main: #e32f2fc6;
+  --plyr-video-control-color: #ffffff;
+  --plyr-range-fill-background: #d62222;
+  --plyr-control-icon-size: 20px;
 }
 
 /*

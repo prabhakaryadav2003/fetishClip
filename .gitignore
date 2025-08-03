@@ -16,6 +16,9 @@
 # production
 /build
 
+# videos
+video-stream/
+
 # misc
 .DS_Store
 *.pem

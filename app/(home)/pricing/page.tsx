@@ -3,26 +3,6 @@
 import { useEffect, useState } from "react";
 import SubscribeButton from "./subscribeButton";
 
-// function PricingCard({
-//   name,
-//   price,
-//   interval,
-//   trialDays,
-//   features,
-//   planId,
-// }: {
-//   name: string;
-//   price: number;
-//   interval: string;
-//   trialDays: number;
-//   features: string[];
-//   planId: string;
-// }) {
-//   return (
-//
-//   );
-// }
-
 type Plan = {
   id: number;
   name: string;
