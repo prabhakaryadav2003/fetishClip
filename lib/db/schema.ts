@@ -59,6 +59,15 @@ export const videos = pgTable("videos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Video Tags
+export const videoTags = pgTable("video_tags", {
+  id: serial("id").primaryKey(),
+  videoId: uuid("video_id")
+    .notNull()
+    .references(() => videos.id, { onDelete: "cascade" }),
+  tag: text("tag").notNull(),
+});
+
 // Activity Logs Table
 export const activityLogs = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
@@ -107,11 +116,18 @@ export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
   }),
 }));
 
-export const videosRelations = relations(videos, ({ one }) => ({
+export const videosRelations = relations(videos, ({ one, many }) => ({
   uploader: one(users, {
     fields: [videos.uploaderId],
     references: [users.id],
-    relationName: "uploader",
+  }),
+  tags: many(videoTags),
+}));
+
+export const videoTagsRelations = relations(videoTags, ({ one }) => ({
+  video: one(videos, {
+    fields: [videoTags.videoId],
+    references: [videos.id],
   }),
 }));
 

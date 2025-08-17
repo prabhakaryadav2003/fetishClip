@@ -1,6 +1,13 @@
 import { desc, and, eq, isNull } from "drizzle-orm";
 import { db } from "./drizzle";
-import { activityLogs, users, videos, plans, subscriptions } from "./schema";
+import {
+  activityLogs,
+  users,
+  videos,
+  videoTags,
+  plans,
+  subscriptions,
+} from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 
@@ -154,12 +161,71 @@ export async function insertVideo(data: {
   url: string;
   thumbnail?: string;
   uploaderId: number;
+  tags: string[];
 }) {
-  return db.insert(videos).values(data);
+  return db.transaction(async (tx) => {
+    const [video] = await tx
+      .insert(videos)
+      .values({
+        title: data.title,
+        description: data.description,
+        url: data.url,
+        thumbnail: data.thumbnail,
+        uploaderId: data.uploaderId,
+      })
+      .returning();
+
+    if (data.tags?.length) {
+      await tx.insert(videoTags).values(
+        data.tags.map((tag) => ({
+          videoId: video.id,
+          tag,
+        }))
+      );
+    }
+
+    return video;
+  });
 }
 
-export async function deleteVideo(videoId: string) {
-  return db.delete(videos).where(eq(videos.id, videoId));
+// Update video and tags
+export async function updateVideo(
+  id: string, // UUID
+  data: Partial<{
+    title: string;
+    description: string;
+    thumbnail: string;
+    tags: string[];
+  }>
+) {
+  return db.transaction(async (tx) => {
+    await tx
+      .update(videos)
+      .set({
+        title: data.title,
+        description: data.description,
+        thumbnail: data.thumbnail,
+      })
+      .where(eq(videos.id, id));
+
+    if (data.tags) {
+      await tx.delete(videoTags).where(eq(videoTags.videoId, id));
+      await tx.insert(videoTags).values(
+        data.tags.map((tag) => ({
+          videoId: id,
+          tag,
+        }))
+      );
+    }
+  });
+}
+
+// Delete video and tags
+export async function deleteVideo(id: string) {
+  return db.transaction(async (tx) => {
+    await tx.delete(videoTags).where(eq(videoTags.videoId, id));
+    await tx.delete(videos).where(eq(videos.id, id));
+  });
 }
 
 // Get activity logs for the current user
@@ -230,7 +296,7 @@ export async function updateSubscription({
   paypalPlanId,
   startTime,
 }: {
-  userId: string;
+  userId: number;
   paypalSubscriptionId: string;
   paypalPlanId: string | number;
   startTime: string | Date;

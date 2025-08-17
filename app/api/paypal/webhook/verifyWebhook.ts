@@ -29,7 +29,7 @@ export async function verifyPaypalWebhook(
   const signature = headers["paypal-transmission-sig"];
   const certUrl = headers["paypal-cert-url"];
   const authAlgo = headers["paypal-auth-algo"];
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID!; // from your PayPal app
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID!;
 
   const verifyReq = new WebhookEventVerifyRequest();
   verifyReq.requestBody({

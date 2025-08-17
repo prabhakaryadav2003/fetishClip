@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
     ppr: true,
     clientSegmentCache: true,
     nodeMiddleware: true,
+    serverActions: {
+      bodySizeLimit: "200mb",
+    },
   },
 };
 

@@ -282,24 +282,29 @@ html {
   scroll-behavior: smooth;
 }
 
+/* For WebKit-based browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
   width: 10px;
-  background: #fafafa;
+  background: #f3f4f6;
 }
-::-webkit-scrollbar-thumb {
-  background: #dc2626;
-  border-radius: 8px;
-  border: 2px solid #fff;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #b91c1c;
-}
+
 ::-webkit-scrollbar-track {
   background: #f3f4f6;
   border-radius: 8px;
 }
 
+::-webkit-scrollbar-thumb {
+  background-color: #df0f0f;
+  border-radius: 8px;
+  border: 2px solid #fff;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #b91c1c;
+}
+
+/* For Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #dc2626 #f3f4f6;
+  scrollbar-color: #df0f0f #f3f4f6;
 }

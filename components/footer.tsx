@@ -135,7 +135,7 @@ export default function Footer({
   links?: { href: string; label: string }[];
 }) {
   return (
-    <footer className="w-full bg-gray-900 text-white py-8 mt-12 border-t border-gray-800">
+    <footer className="w-full bg-gray-900 text-white py-8 border-t border-gray-800">
       <div className="max-w-7xl mx-auto flex flex-col mb-4 md:flex-row items-center justify-between px-6 space-y-6 md:space-y-0">
         <BrandSection logoSrc={logoSrc} brand={brand} />
         <SocialLinks />
