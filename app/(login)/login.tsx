@@ -47,7 +47,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             >
               Email
             </Label>
-            <div className="mt-1">
+            <div className="mt-2">
               <Input
                 id="email"
                 name="email"
@@ -68,7 +68,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             >
               Password
             </Label>
-            <div className="mt-1">
+            <div className="mt-2">
               <Input
                 id="password"
                 name="password"
@@ -85,6 +85,45 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
               />
             </div>
           </div>
+          {mode === "signup" && (
+            <div>
+              <Label
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Role
+              </Label>
+              <div className="relative">
+                <select
+                  id="role"
+                  name="role"
+                  defaultValue="viewer"
+                  className="
+                    block w-full appearance-none
+                    rounded-full border border-gray-300 bg-white
+                    px-4 py-2 pr-10
+                    text-gray-900 placeholder-gray-500
+                  "
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="creator">Creator</option>
+                </select>
+
+                <svg
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.586l3.71-3.355a.75.75 0 111.02 1.096l-4.25 3.846a.75.75 0 01-1.02 0l-4.25-3.846a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+          )}
           {state?.error && (
             <div className="text-red-500 text-sm">{state.error}</div>
           )}

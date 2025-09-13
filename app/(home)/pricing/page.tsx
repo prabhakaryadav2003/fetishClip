@@ -1,7 +1,7 @@
 "use client";
 
+import PayPalCheckout from "@/components/PaypalCheckout";
 import { useEffect, useState } from "react";
-import SubscribeButton from "./subscribeButton";
 
 type Plan = {
   id: number;
@@ -38,7 +38,7 @@ export default function Plans() {
           </div>
 
           <div className="mt-6">
-            <SubscribeButton paypalPlanId={plan.paypalPlanId} />
+            <PayPalCheckout cart={[{ id: plan.name, quantity: 1 }]} />
           </div>
         </div>
       ))}

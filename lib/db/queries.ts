@@ -103,13 +103,13 @@ export async function changeUserPassword(
 // Update user's account information
 export async function updateUserAccount(
   userId: number,
-  data: { name?: string; email?: string }
+  data: { name?: string; email?: string; url?: string }
 ) {
-  const { name, email } = data;
+  const { name, email, url } = data;
   const updates: any = { updatedAt: new Date() };
   if (name) updates.name = name;
   if (email) updates.email = email;
-
+  if (url) updates.fetisherosUrl = url;
   await db.update(users).set(updates).where(eq(users.id, userId));
 }
 

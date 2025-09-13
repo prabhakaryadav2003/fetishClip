@@ -97,7 +97,7 @@ export function validatedActionWithActiveUser<S extends z.ZodTypeAny, T>(
 
 // Check if a user is a creator
 export function isCreator(user: User) {
-  return user.role === "creator" || user.role === "admin";
+  return user.role === "creator" || user.role === "owner";
 }
 
 // Check if a user has an active subscription
@@ -125,6 +125,7 @@ export async function addVideoAction(data: {
   description?: string;
   url: string;
   thumbnail?: string;
+  tags: string[];
 }) {
   const user = await getUser();
   if (!user || !isCreator(user)) redirect("/not-authorized");

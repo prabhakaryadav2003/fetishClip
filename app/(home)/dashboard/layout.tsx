@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Video, Settings, Shield, Activity, Menu } from "lucide-react";
+import {
+  Users,
+  Video,
+  UserLock,
+  Settings,
+  Shield,
+  Activity,
+  Menu,
+} from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -16,7 +24,11 @@ export default function DashboardLayout({
 
   const navItems = [
     { href: "/dashboard", icon: Users, label: "Account" },
-    { href: "/dashboard/manage-videos", icon: Users, label: "Manage Videos" },
+    {
+      href: "/dashboard/manage-videos",
+      icon: UserLock,
+      label: "Manage Videos",
+    },
     { href: "/dashboard/my-videos", icon: Video, label: "My Videos" },
     { href: "/dashboard/general", icon: Settings, label: "General" },
     { href: "/dashboard/activity", icon: Activity, label: "Activity" },

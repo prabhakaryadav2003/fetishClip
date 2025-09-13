@@ -12,6 +12,7 @@ import useSWR from "swr";
 type ActionState = {
   name?: string;
   email?: string;
+  url?: string;
   error?: string;
   success?: string;
 };
@@ -22,10 +23,12 @@ function AccountForm({
   state,
   nameValue = "",
   emailValue = "",
+  urlValue = "",
 }: {
   state: ActionState;
   nameValue?: string;
   emailValue?: string;
+  urlValue?: string;
 }) {
   return (
     <>
@@ -51,6 +54,18 @@ function AccountForm({
           type="email"
           placeholder="Enter your email"
           defaultValue={state.email ?? emailValue}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="url" className="mb-2">
+          FetishEros URL
+        </Label>
+        <Input
+          id="url"
+          name="url"
+          placeholder="Enter your fetisheros URL (e.g. www.fetisheros.com/yourname)"
+          defaultValue={state.url ?? urlValue}
           required
         />
       </div>
@@ -86,6 +101,7 @@ export default function GeneralPage() {
                 state={state}
                 nameValue={user?.name ?? ""}
                 emailValue={user?.email ?? ""}
+                urlValue={user?.url ?? ""}
               />
             )}
             {state.error && (

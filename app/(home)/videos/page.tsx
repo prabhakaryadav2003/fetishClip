@@ -11,6 +11,7 @@ const mockVideos = new Array(100).fill(null).map((_, i) => ({
   thumbnail: `https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg`,
   channel: `Channel ${Math.ceil((i + 1) / 5)}`,
   views: `${(i + 1) * 1000} views`,
+  url: "this-is-test2",
 }));
 
 const ITEMS_PER_PAGE = 9;

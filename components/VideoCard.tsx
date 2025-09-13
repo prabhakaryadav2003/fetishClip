@@ -1,14 +1,22 @@
+"use client";
+import { useRouter } from "next/navigation";
+
 type Props = {
   id: string;
   title: string;
   thumbnail: string;
   channel?: string;
   views?: string;
+  url: string;
 };
 
-const VideoCard = ({ id, title, thumbnail, channel, views }: Props) => {
+const VideoCard = ({ id, title, thumbnail, channel, views, url }: Props) => {
+  const router = useRouter();
   return (
-    <div className="bg-gray-100 rounded-lg overflow-hidden shadow hover:shadow-red-300 hover:scale-103 transition cursor-pointer">
+    <div
+      className="bg-gray-100 rounded-lg overflow-hidden shadow hover:shadow-red-300 hover:scale-103 transition cursor-pointer"
+      onClick={() => router.push(`videos/${url}`)}
+    >
       <img
         src={thumbnail}
         alt={title}

@@ -1,7 +1,6 @@
 import ConsentWrapper from "./consentWrapper";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Lock } from "lucide-react";
 import VideoCard from "@/components/VideoCard";
 
 const featuredVideos = [
@@ -85,6 +84,7 @@ export function Featured() {
                 thumbnail={video.thumbnail}
                 channel={video.channel}
                 views={video.views}
+                url="this-is-test2"
               />
             </Link>
           ))}

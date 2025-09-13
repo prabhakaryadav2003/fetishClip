@@ -35,6 +35,7 @@ export async function logActivity(
 const updateAccountSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email address"),
+  url: z.string().min(1, "Url is required").max(255),
 });
 
 export async function updateAccount(prevState: any, formData: FormData) {
@@ -42,20 +43,42 @@ export async function updateAccount(prevState: any, formData: FormData) {
   if (!user || user.deletedAt) {
     return { error: "Not authenticated." };
   }
+
   const result = updateAccountSchema.safeParse(Object.fromEntries(formData));
   if (!result.success) {
     return { error: result.error.errors[0]?.message || "Invalid input." };
   }
-  const { name, email } = result.data;
+
+  let { name, email, url } = result.data;
+
+  if (url) {
+    try {
+      // Ensure URL is parseable
+      const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
+
+      const parsed = new URL(normalizedUrl);
+      const hostname = parsed.hostname.toLowerCase();
+
+      if (hostname !== "fetisheros.com" && hostname !== "www.fetisheros.com") {
+        return { error: "This domain is not allowed." };
+      }
+
+      // Strip protocol before saving
+      url = hostname + parsed.pathname + parsed.search + parsed.hash;
+    } catch {
+      return { error: "Invalid URL format." };
+    }
+  }
 
   await updateUserAccount(user.id, {
     name,
     email,
+    url,
   });
 
   await logActivity(user.id, ActivityType.UPDATE_ACCOUNT);
 
-  return { name, email, success: "Account updated successfully." };
+  return { name, email, url, success: "Account updated successfully." };
 }
 
 // Sign In
@@ -104,10 +127,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  role: z.enum(["viewer", "creator"]).optional(),
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password } = data;
+  const { email, password, role = "viewer" } = data;
 
   const existingUser = await getUserByEmail(email);
   if (existingUser) {
@@ -120,10 +144,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const passwordHash = await hashPassword(password);
 
-  // Insert the new user
+  // Insert the new user with role
   await createUser({
     email,
     passwordHash,
+    role,
   });
 
   const newUser = await getUserByEmail(email);
@@ -142,8 +167,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   // const redirectTo = formData.get("redirect") as string | null;
   // if (redirectTo === "checkout") {
-  //   const priceId = formData.get("priceId") as string;
-  //   return createCheckoutSession({ user: createdUser, priceId });
+  // redirect("/pricing");
   // }
 
   redirect("/dashboard");

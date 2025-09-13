@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/paypal-server-sdk": "^1.1.0",
     "@paypal/react-paypal-js": "^8.8.3",
     "@tailwindcss/postcss": "4.1.7",
     "@types/node": "^22.15.18",

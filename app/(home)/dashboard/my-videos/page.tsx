@@ -4,6 +4,7 @@ import { useState, useRef, DragEvent } from "react";
 import { Upload, Pencil, Trash2, X } from "lucide-react";
 import clsx from "clsx";
 import { uploadVideo } from "./actions";
+import { VideoStored, VideoForm } from "@/types/global";
 import { z } from "zod";
 
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
@@ -25,23 +26,8 @@ const videoSchema = z.object({
     }),
 });
 
-interface Video {
-  id: string;
-  title: string;
-  description: string;
-  tagsInput: string;
-  tags: string[];
-  thumbnail: File;
-  videoFile: File;
-}
-
-type VideoForm = Partial<Video> & {
-  thumbnailPreview?: string;
-  videoPreview?: string;
-};
-
 export default function VideoManagementPage() {
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [videos, setVideos] = useState<VideoStored[]>([]);
   const [form, setForm] = useState<VideoForm>({});
   const [formErrors, setFormErrors] = useState<
     Partial<Record<keyof VideoForm, string>>
@@ -126,7 +112,7 @@ export default function VideoManagementPage() {
 
     await uploadVideo(formData);
 
-    const newVideo: Video = {
+    const newVideo: VideoStored = {
       id: isEditing || Date.now().toString(),
       title,
       description,
@@ -145,7 +131,7 @@ export default function VideoManagementPage() {
     resetForm();
   };
 
-  const handleEdit = (video: Video) => {
+  const handleEdit = (video: VideoStored) => {
     setForm({
       ...video,
       thumbnailPreview: URL.createObjectURL(video.thumbnail),
