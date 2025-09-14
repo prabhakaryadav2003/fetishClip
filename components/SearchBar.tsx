@@ -1,20 +1,24 @@
-type Props = {
+interface SearchBarProps {
   value: string;
   onChange: (val: string) => void;
-};
+  onEnter?: () => void;
+}
 
-const SearchBar = ({ value, onChange }: Props) => {
+export default function SearchBar({
+  value,
+  onChange,
+  onEnter,
+}: SearchBarProps) {
   return (
-    <div className="w-full">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Search videos..."
-        className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-600 transition"
-      />
-    </div>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && onEnter) onEnter();
+      }}
+      placeholder="Search videos..."
+      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-500"
+    />
   );
-};
-
-export default SearchBar;
+}

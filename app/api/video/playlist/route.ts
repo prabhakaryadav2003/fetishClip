@@ -9,18 +9,21 @@ export async function GET(req: NextRequest) {
   // if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const videoId = searchParams.get("videoId");
+  const videoTitle = searchParams.get("videoId");
   const type = searchParams.get("type") ?? "master"; // master or variant
   const quality = searchParams.get("quality") ?? "v0"; // v0, v1, etc.
 
-  if (!videoId) return new NextResponse("Missing videoId", { status: 400 });
+  if (!videoTitle)
+    return new NextResponse("Missing videoTitle", { status: 400 });
 
   let playlistPath: string;
 
   if (type === "variant") {
-    playlistPath = path.resolve(`video-stream/${videoId}/${quality}/prog.m3u8`);
+    playlistPath = path.resolve(
+      `video-stream/${videoTitle}/${quality}/prog.m3u8`
+    );
   } else {
-    playlistPath = path.resolve(`video-stream/${videoId}/master.m3u8`);
+    playlistPath = path.resolve(`video-stream/${videoTitle}/master.m3u8`);
   }
 
   if (!fs.existsSync(playlistPath)) {
@@ -37,12 +40,12 @@ export async function GET(req: NextRequest) {
       // Rewrite nested variant playlists (e.g. v0/prog.m3u8)
       if (type === "master" && trimmed.endsWith(".m3u8")) {
         const quality = trimmed.split("/")[0];
-        return `/api/video/playlist?videoId=${videoId}&type=variant&quality=${quality}`;
+        return `/api/video/playlist?videoId=${videoTitle}&type=variant&quality=${quality}`;
       }
 
       // Rewrite .ts segment paths
       if (type === "variant" && trimmed.endsWith(".ts")) {
-        return `/api/video/segment?videoId=${videoId}&quality=${quality}&segment=${encodeURIComponent(trimmed)}`;
+        return `/api/video/segment?videoId=${videoTitle}&quality=${quality}&segment=${encodeURIComponent(trimmed)}`;
       }
 
       return line;

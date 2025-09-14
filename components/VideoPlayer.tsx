@@ -11,7 +11,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ videoId }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
-  const playerRef = useRef<any>(null); // Temporarily use 'any' for dynamic Plyr
+  const playerRef = useRef<any>(null); // Plyr instance
 
   useEffect(() => {
     const setupPlayer = async () => {
@@ -42,12 +42,15 @@ export default function VideoPlayer({ videoId }: VideoPlayerProps) {
 
         const plyrOptions = {
           controls: [
+            "play-large",
             "play",
             "progress",
             "current-time",
             "mute",
             "volume",
             "settings",
+            "pip",
+            "airplay",
             "fullscreen",
           ],
           settings: ["quality"],
@@ -90,13 +93,15 @@ export default function VideoPlayer({ videoId }: VideoPlayerProps) {
   }, [videoId]);
 
   return (
-    <div className="max-w-3xl mx-auto p-4 relative">
-      <video
-        ref={videoRef}
-        controls
-        playsInline
-        className="w-full shadow-md bg-black aspect-video"
-      />
+    <div className="max-w-5xl mx-auto my-6 px-4">
+      <div className="relative rounded-xl overflow-hidden shadow-lg">
+        <video
+          ref={videoRef}
+          controls
+          playsInline
+          className="w-full aspect-video rounded-xl"
+        />
+      </div>
     </div>
   );
 }

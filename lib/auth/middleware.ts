@@ -6,6 +6,7 @@ import {
   getVideoById,
   insertVideo,
   deleteVideo,
+  getPublicVideos,
 } from "@/lib/db/queries";
 import { redirect } from "next/navigation";
 import type { User } from "@/lib/db/schema";
@@ -105,11 +106,30 @@ export function isActiveSubscriber(user: User) {
   return user.subscriptionStatus === "active";
 }
 
-// List all videos (for public or active subscriber)
+// List all videos
 export async function listAllVideosAction() {
   const user = await getUser();
-  if (!user || !isActiveSubscriber(user)) redirect("/subscribe");
-  return getAllVideos();
+  // Ensure a user is provided (from server session or auth token)
+  if (!user || (!isCreator(user) && !isActiveSubscriber(user))) {
+    // Stop execution and prevent any data leakage
+    return {
+      success: false,
+      message: "Unauthorized access. Please subscribe or upgrade your account.",
+      data: [],
+    };
+  }
+
+  // Authorized users
+  const videos = await getAllVideos();
+  return {
+    success: true,
+    data: videos,
+  };
+}
+
+// List Public videos
+export async function listPublicVideosAction() {
+  return getPublicVideos();
 }
 
 // List uploaded videos (for creators)

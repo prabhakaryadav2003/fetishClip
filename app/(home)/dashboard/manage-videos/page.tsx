@@ -1,126 +1,224 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Trash2, Globe } from "lucide-react";
-import { VideoStored } from "@/types/global";
+import { useState, useEffect } from "react";
+import { Upload } from "lucide-react";
+import VideoModal from "@/components/VideoModal";
+import { VideoForm } from "@/types/global";
+import { z } from "zod";
+import { getAllVideos } from "./actions";
+import { VideoData } from "@/lib/video/videoData";
+import AdminVideoCard from "@/components/AdminVideoCard";
+import { redirect } from "next/navigation";
+
+const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
+
+const videoSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  tags: z.array(z.string()).min(1, "At least one tag is required"),
+  thumbnail: z
+    .instanceof(File, { message: "Thumbnail file is required" })
+    .refine((file) => file.size <= MAX_THUMBNAIL_SIZE, {
+      message: "Thumbnail must be less than 50MB",
+    }),
+  videoFile: z
+    .instanceof(File, { message: "Video file is required" })
+    .refine((file) => file.size <= MAX_VIDEO_SIZE, {
+      message: "Video must be less than 1GB",
+    }),
+});
 
 export default function VideoManagementPage() {
-  const [videos, setVideos] = useState<VideoStored[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [videos, setVideos] = useState<VideoData[]>([]);
+  const [form, setForm] = useState<VideoForm>({});
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof VideoForm, string>>
+  >({});
+  const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setLoading] = useState(false);
 
-  //Fetch videos from API
   useEffect(() => {
-    const fetchVideos = async () => {
+    const loadVideos = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/videos");
-        const data = await res.json();
-        setVideos(data);
-      } catch (err) {
-        console.error("Failed to fetch videos", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const response = await getAllVideos();
 
-    fetchVideos();
+        if (
+          response.success &&
+          typeof response.data === "object" &&
+          "videos" in response.data &&
+          Array.isArray(response.data.videos) &&
+          response.data.videos.length > 0
+        ) {
+          const { videos, total } = response.data;
+          setVideos(videos);
+        } else {
+          redirect("/pricing");
+        }
+      } catch (err) {
+        alert("Failed to fetch videos");
+      }
+      setLoading(false);
+    };
+    loadVideos();
   }, []);
 
-  //Delete video
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this video?")) return;
+  const resetForm = () => {
+    setForm({});
+    setFormErrors({});
+    setIsEditing(null);
+    setShowModal(false);
+  };
+
+  const handleUpload = async () => {
+    const tagsArray = (form.tagsInput || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const result = videoSchema.safeParse({
+      title: form.title,
+      description: form.description,
+      tags: tagsArray,
+      thumbnail: form.thumbnail,
+      videoFile: form.videoFile,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof VideoForm, string>> = {};
+      result.error.errors.forEach((err) => {
+        const fieldName = err.path[0] as keyof VideoForm;
+        fieldErrors[fieldName] = err.message;
+      });
+      setFormErrors(fieldErrors);
+      return;
+    }
+
+    const { title, description, tags, thumbnail, videoFile } = result.data;
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("tags", tags.join(","));
+    formData.append("thumbnail", thumbnail);
+    formData.append("videoFile", videoFile);
 
     try {
-      await fetch(`/api/videos/${id}`, {
-        method: "DELETE",
+      setIsUploading(true);
+
+      const res = await fetch("/api/video/upload", {
+        method: "POST",
+        body: formData,
       });
-      setVideos((prev) => prev.filter((v) => v.id !== id));
+
+      const data = await res.json();
+
+      if (data?.error) {
+        alert(`Upload failed: ${data.error}`);
+        return;
+      }
+
+      // Refresh list after successful upload
+      try {
+        const response = await getAllVideos();
+        if (
+          response.success &&
+          typeof response.data === "object" &&
+          "videos" in response.data &&
+          Array.isArray(response.data.videos) &&
+          response.data.videos.length > 0
+        ) {
+          const { videos, total } = response.data;
+          setVideos(videos);
+        } else {
+          redirect("/pricing");
+        }
+      } catch (err) {
+        alert("Failed to fetch videos");
+      }
+
+      resetForm();
     } catch (err) {
-      console.error("Delete failed", err);
+      console.error("Upload error:", err);
+      alert("Upload failed");
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  //Make video public
-  const handleMakePublic = async (id: string) => {
-    try {
-      await fetch(`/api/videos/${id}/publish`, {
-        method: "PATCH",
-      });
-      setVideos((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, isPublic: true } : v))
-      );
-    } catch (err) {
-      console.error("Make public failed", err);
-    }
+  // Handle update
+  const handleUpdated = (
+    updatedFields: Partial<VideoData> & { id: string }
+  ) => {
+    setVideos((prev) =>
+      prev.map((v) =>
+        v.id === updatedFields.id ? { ...v, ...updatedFields } : v
+      )
+    );
   };
 
-  if (loading) return <p className="p-4">Loading videos...</p>;
+  // Handle delete
+  const handleDeleted = (id: string) => {
+    setVideos((prev) => prev.filter((v) => v.id !== id));
+  };
 
   return (
-    <div className="bg-white p-4 text-black">
+    <div className="bg-white text-black p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-red-600 mb-6">
-          Video Management
-        </h1>
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
+            Video Management (Admin)
+          </h1>
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            <Upload className="w-5 h-5" /> Upload Video
+          </button>
+        </div>
 
-        {/* Video List */}
-        <div className="space-y-4">
-          {videos.map((video) => (
-            <div
-              key={video.id}
-              className="flex items-start gap-4 bg-gray-50 border rounded-lg p-4 shadow hover:shadow-red-200 transition"
-            >
-              {/* Thumbnail */}
-              <img
-                src={
-                  typeof video.thumbnail === "string"
-                    ? video.thumbnail
-                    : (video.thumbnail as any).src
-                }
-                alt={video.title}
-                className="w-32 h-20 object-cover rounded"
-              />
-
-              {/* Info */}
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{video.title}</h3>
-                <p className="text-sm text-gray-600">{video.description}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Tags: {video.tags.join(", ")}
-                </p>
-
-                {/* Actions */}
-                <div className="flex gap-4 mt-2 text-sm">
-                  <button
-                    onClick={() => handleDelete(video.id)}
-                    className="flex items-center gap-1 text-gray-600 hover:underline"
-                  >
-                    <Trash2 size={16} /> Delete
-                  </button>
-                  {!video.isPublic && (
-                    <button
-                      onClick={() => handleMakePublic(video.id)}
-                      className="flex items-center gap-1 text-green-600 hover:underline"
-                    >
-                      <Globe size={16} /> Make Public
-                    </button>
-                  )}
-                  {video.isPublic && (
-                    <span className="text-green-700 text-sm font-semibold">
-                      ✅ Public
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {videos.length === 0 && (
-            <p className="text-gray-500 text-center py-8">
-              No videos available.
+        {/* Video Grid */}
+        <div className="flex flex-col divide-y divide-gray-200 mt-2">
+          {isLoading ? (
+            <p className="text-sm text-gray-500 p-4 text-center">
+              Loading videos...
             </p>
+          ) : videos.length === 0 ? (
+            <p className="text-sm text-gray-500 p-4 text-center">
+              No videos found.
+            </p>
+          ) : (
+            videos.map((v) => (
+              <AdminVideoCard
+                key={v.id}
+                video={v}
+                onUpdated={handleUpdated}
+                onDeleted={handleDeleted}
+              />
+            ))
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <VideoModal
+          form={form}
+          setForm={setForm}
+          formErrors={formErrors}
+          handleUpload={handleUpload}
+          resetForm={resetForm}
+          isEditing={isEditing}
+          isUploading={isUploading}
+        />
+      )}
     </div>
   );
 }

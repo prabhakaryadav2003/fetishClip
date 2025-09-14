@@ -2,19 +2,15 @@
 import React, { useState } from "react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
-// Renders errors or successfull transactions on the screen.
-function Message({ content }: { content: string }) {
-  return <p>{content}</p>;
-}
-
 type CartItem = { id: string; quantity: number };
 
 interface PayPalCheckoutProps {
   cart: CartItem[];
 }
 
-export default function PayPalCheckout({ cart }: { cart: CartItem[] }) {
+export default function PayPalCheckout({ cart }: PayPalCheckoutProps) {
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const initialOptions = {
     clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "",
@@ -24,6 +20,12 @@ export default function PayPalCheckout({ cart }: { cart: CartItem[] }) {
   return (
     <div>
       <PayPalScriptProvider options={initialOptions}>
+        {loading && (
+          <div className="flex justify-center items-center h-12">
+            Loading ...
+          </div>
+        )}
+
         <PayPalButtons
           style={{
             shape: "rect",
@@ -31,7 +33,10 @@ export default function PayPalCheckout({ cart }: { cart: CartItem[] }) {
             color: "gold",
             label: "paypal",
           }}
-          createOrder={async (_, actions) => {
+          onInit={() => {
+            setLoading(false); // remove loader when button is ready
+          }}
+          createOrder={async () => {
             const res = await fetch("/api/paypal/create", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -41,27 +46,24 @@ export default function PayPalCheckout({ cart }: { cart: CartItem[] }) {
             if (!res.ok) throw new Error("Failed to create PayPal order");
 
             const data: { orderID: string } = await res.json();
+            if (!data.orderID) throw new Error("No orderID returned");
 
-            if (!data.orderID)
-              throw new Error("No orderID returned from server");
-
-            // Return the orderID to PayPal
             return data.orderID;
           }}
-          onApprove={async (data, actions) => {
+          onApprove={async (data) => {
             try {
               const res = await fetch(`/api/paypal/${data.orderID}/capture`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
               });
-              const orderData = await res.json();
 
+              const orderData = await res.json();
               const transaction =
                 orderData.purchase_units[0].payments.captures[0];
+
               setMessage(
                 `Transaction ${transaction.status}: ${transaction.id}`
               );
-              console.log("Capture result", orderData);
             } catch (error) {
               console.error(error);
               setMessage(`Transaction failed: ${error}`);
@@ -74,7 +76,7 @@ export default function PayPalCheckout({ cart }: { cart: CartItem[] }) {
         />
       </PayPalScriptProvider>
 
-      {message && <div>{message}</div>}
+      {message && <div className="mt-4 text-sm text-gray-700">{message}</div>}
     </div>
   );
 }

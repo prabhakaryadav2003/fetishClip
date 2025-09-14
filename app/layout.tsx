@@ -1,9 +1,15 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
 import { getUser, getAllVideos } from "@/lib/db/queries";
 import { SWRConfig } from "swr";
 import favicon from "@/public/images/favicon.ico";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "FetishClip | BDSM, Fetish, and Kink Video Platform",
@@ -14,8 +20,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-const manrope = Manrope({ subsets: ["latin"] });
-
 export default function RootLayout({
   children,
 }: {
@@ -24,7 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${montserrat.className}`}
     >
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -9,12 +9,11 @@ export function generateVideoSchema(video: VideoData) {
     thumbnailUrl: video.thumbnailUrl,
     uploadDate: video.uploadDate,
     contentUrl: `https://example.com${video.videoUrl}`,
-    embedUrl: `https://example.com/video/${video.id}`,
+    embedUrl: `https://example.com/videos/${video.id}`,
     genre: video.tags,
     actor: {
       "@type": "Person",
-      name: video.model.name,
-      url: `https://example.com/models/${video.model.slug}`,
+      name: video.uploaderName,
     },
     publisher: {
       "@type": "Organization",

@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull } from "drizzle-orm";
+import { desc, and, eq, isNull, ilike } from "drizzle-orm";
 import { db } from "./drizzle";
 import {
   activityLogs,
@@ -10,6 +10,8 @@ import {
 } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
+import { VideoData } from "../video/videoData";
+import { sql } from "drizzle-orm";
 
 export async function deleteUser(userId: number) {
   const user = await getUserById(userId);
@@ -133,26 +135,160 @@ export async function updateUserSubscription(
 }
 
 // List all videos
-export async function getAllVideos() {
-  return db.select().from(videos).orderBy(desc(videos.createdAt));
+// export async function getAllVideos() {
+//   return db.select().from(videos).orderBy(desc(videos.createdAt));
+// }
+
+// Helper to map DB rows to VideoData
+const mapToVideoData = (row: any): VideoData => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? "",
+  tags: row.tags ?? [],
+  uploaderName: row.uploaderName ?? "Unknown",
+  uploaderUrl: row.uploaderUrl ?? "",
+  videoUrl: row.url,
+  thumbnailUrl: row.thumbnail ?? "",
+  isPublic: row.isPublic ?? "false",
+  views: Number(row.views),
+  uploadDate: row.createdAt.toISOString(),
+});
+
+/**
+ * Fetch all videos
+ */
+
+export async function getAllVideos(
+  page = 1,
+  limit = 9,
+  search?: string
+): Promise<{ videos: VideoData[]; total: number }> {
+  const offset = (page - 1) * limit;
+
+  // Where clause for search
+  const where = search ? ilike(videos.title, `%${search}%`) : undefined;
+
+  // Fetch videos (paginated)
+  const rows = await db
+    .select({
+      id: videos.id,
+      title: videos.title,
+      description: videos.description,
+      url: videos.url,
+      thumbnail: videos.thumbnail,
+      views: videos.views,
+      createdAt: videos.createdAt,
+      uploaderName: users.name,
+      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+    })
+    .from(videos)
+    .leftJoin(users, eq(videos.uploaderId, users.id))
+    .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
+    .where(where ?? sql`TRUE`)
+    .groupBy(videos.id, users.name)
+    .orderBy(desc(videos.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  // Get total count (for pagination UI)
+  const totalRes = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(videos)
+    .where(where ?? sql`TRUE`);
+
+  const total = Number(totalRes[0].count);
+
+  return {
+    videos: rows.map(mapToVideoData),
+    total,
+  };
+}
+
+/**
+ * Fetch only public videos
+ */
+export async function getPublicVideos(): Promise<VideoData[]> {
+  const rows = await db
+    .select({
+      id: videos.id,
+      title: videos.title,
+      description: videos.description,
+      url: videos.url,
+      thumbnail: videos.thumbnail,
+      views: videos.views,
+      createdAt: videos.createdAt,
+      uploaderName: users.name,
+      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+    })
+    .from(videos)
+    .leftJoin(users, eq(videos.uploaderId, users.id))
+    .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
+    .where(eq(videos.isPublic, true))
+    .groupBy(videos.id, users.name);
+
+  return rows.map(mapToVideoData);
+}
+
+export async function getVideoById(id: string): Promise<VideoData | null> {
+  return db.transaction(async (tx) => {
+    // Increment view count atomically
+    await tx
+      .update(videos)
+      .set({ views: sql`${videos.views} + 1` })
+      .where(eq(videos.id, id));
+
+    // Fetch updated video with joins
+    const row = await tx
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        url: videos.url,
+        thumbnail: videos.thumbnail,
+        views: videos.views,
+        createdAt: videos.createdAt,
+        uploaderName: users.name,
+        uploaderUrl: users.fetisherosUrl,
+        tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+      })
+      .from(videos)
+      .leftJoin(users, eq(videos.uploaderId, users.id))
+      .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
+      .where(eq(videos.id, id))
+      .groupBy(videos.id, users.name, users.fetisherosUrl)
+      .limit(1);
+
+    if (!row[0]) return null;
+
+    return mapToVideoData(row[0]);
+  });
 }
 
 // List videos from a specific creator
-export async function getVideosByCreator(creatorId: number) {
-  return db
-    .select()
+export async function getVideosByCreator(
+  creatorId: number
+): Promise<VideoData[]> {
+  const rows = await db
+    .select({
+      id: videos.id,
+      title: videos.title,
+      description: videos.description,
+      url: videos.url,
+      thumbnail: videos.thumbnail,
+      views: videos.views,
+      isPublic: videos.isPublic,
+      createdAt: videos.createdAt,
+      uploaderName: users.name,
+      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+    })
     .from(videos)
+    .leftJoin(users, eq(videos.uploaderId, users.id))
+    .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
     .where(eq(videos.uploaderId, creatorId))
+    .groupBy(videos.id, users.name)
     .orderBy(desc(videos.createdAt));
-}
 
-export async function getVideoById(videoId: string) {
-  const result = await db
-    .select()
-    .from(videos)
-    .where(eq(videos.id, videoId))
-    .limit(1);
-  return result[0] ?? null;
+  return rows.map(mapToVideoData);
 }
 
 export async function insertVideo(data: {
@@ -188,26 +324,28 @@ export async function insertVideo(data: {
   });
 }
 
-// Update video and tags
+// Update video and tags, returning the updated video
 export async function updateVideo(
   id: string, // UUID
   data: Partial<{
     title: string;
     description: string;
-    thumbnail: string;
+    isPublic: boolean;
     tags: string[];
   }>
 ) {
   return db.transaction(async (tx) => {
+    // Update main video fields
     await tx
       .update(videos)
       .set({
         title: data.title,
         description: data.description,
-        thumbnail: data.thumbnail,
+        isPublic: data.isPublic,
       })
       .where(eq(videos.id, id));
 
+    // Update tags
     if (data.tags) {
       await tx.delete(videoTags).where(eq(videoTags.videoId, id));
       await tx.insert(videoTags).values(
@@ -217,6 +355,30 @@ export async function updateVideo(
         }))
       );
     }
+
+    // Fetch updated video including tags
+    const updatedVideo = await tx
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        isPublic: videos.isPublic,
+      })
+      .from(videos)
+      .where(eq(videos.id, id))
+      .then(async (rows) => {
+        const video = rows[0];
+        const tagsRows = await tx
+          .select({ tag: videoTags.tag })
+          .from(videoTags)
+          .where(eq(videoTags.videoId, id));
+        return {
+          ...video,
+          tags: tagsRows.map((r) => r.tag),
+        };
+      });
+
+    return updatedVideo;
   });
 }
 

@@ -12,7 +12,7 @@ export interface VideoInput extends BaseVideo {
 }
 
 export interface VideoStored extends BaseVideo {
-  thumbnail: Blob | MediaSource;
+  thumbnail: File;
   videoFile: File;
   isPublic?: Boolean;
 }
