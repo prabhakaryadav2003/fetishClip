@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, ilike } from "drizzle-orm";
+import { desc, and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "./drizzle";
 import {
   activityLogs,
@@ -8,87 +8,121 @@ import {
   plans,
   subscriptions,
 } from "./schema";
+import { User } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
-import { VideoData } from "../../types/videoData";
-import { sql } from "drizzle-orm";
+import { VideoData } from "@/types/videoData";
+import { v4 as uuidv4 } from "uuid";
 
+/**
+ * Helper: returns current timestamp for consistency
+ */
+function now() {
+  return new Date();
+}
+
+/**
+ * Soft delete a user and clean up related records
+ */
 export async function deleteUser(userId: number) {
   const user = await getUserById(userId);
   if (!user) {
     throw new Error("User not found");
   }
 
+  // Soft-delete the user
   await db
     .update(users)
     .set({
-      deletedAt: new Date(),
-      updatedAt: new Date(),
+      deletedAt: now(),
+      updatedAt: now(),
       email: `${user.email}-${user.id}-deleted`,
     })
     .where(eq(users.id, userId));
 
+  // Clean up related data
   await db.delete(videos).where(eq(videos.uploaderId, userId));
   await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
 }
 
+/**
+ * Create a new user
+ */
 export async function createUser(data: {
   email: string;
   passwordHash: string;
   role?: string;
 }) {
   const { email, passwordHash, role = "viewer" } = data;
-  return db.insert(users).values({
-    email,
-    passwordHash,
-    role,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+
+  const [result] = await db
+    .insert(users)
+    .values({
+      email,
+      passwordHash,
+      role,
+      createdAt: now(),
+      updatedAt: now(),
+    })
+    .$returningId(); // MySQL/MariaDB helper
+
+  return result;
 }
 
-// Get the current authenticated user
+/**
+ * Get the currently authenticated user based on session cookie
+ */
 export async function getUser() {
   const sessionCookie = (await cookies()).get("session");
   if (!sessionCookie?.value) return null;
 
   const sessionData = await verifyToken(sessionCookie.value);
   if (
-    !sessionData ||
-    !sessionData.user ||
-    typeof sessionData.user.id !== "number"
+    !sessionData?.user ||
+    typeof sessionData.user.id !== "number" ||
+    new Date(sessionData.expires) < new Date()
   ) {
     return null;
   }
-  if (new Date(sessionData.expires) < new Date()) {
-    return null;
-  }
+
   const user = await db
     .select()
     .from(users)
     .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
     .limit(1);
-  return user.length === 0 ? null : user[0];
+
+  return user[0] ?? null;
 }
 
+/**
+ * Fetch a user by their ID, ignoring soft-deleted users
+ */
 export async function getUserById(userId: number) {
   const user = await db
     .select()
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
     .limit(1);
-  return user.length === 0 ? null : user[0];
+
+  return user[0] ?? null;
 }
 
+/**
+ * Fetch a user by email
+ */
 export async function getUserByEmail(email: string) {
   const result = await db
     .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
+
   return result[0] ?? null;
 }
 
+/**
+ * Change a user's password
+ */
 export async function changeUserPassword(
   userId: number,
   newPasswordHash: string
@@ -97,25 +131,31 @@ export async function changeUserPassword(
     .update(users)
     .set({
       passwordHash: newPasswordHash,
-      updatedAt: new Date(),
+      updatedAt: now(),
     })
     .where(eq(users.id, userId));
 }
 
-// Update user's account information
+/**
+ * Update user's account info (name, email, fetisherosUrl)
+ */
 export async function updateUserAccount(
   userId: number,
-  data: { name?: string; email?: string; url?: string }
+  data: Partial<User & { url?: string }>
 ) {
-  const { name, email, url } = data;
-  const updates: any = { updatedAt: new Date() };
-  if (name) updates.name = name;
-  if (email) updates.email = email;
-  if (url) updates.fetisherosUrl = url;
+  const updates: Partial<typeof data & { updatedAt: Date }> = {
+    updatedAt: now(),
+  };
+  if (data.name) updates.name = data.name;
+  if (data.email) updates.email = data.email;
+  if (data.url) updates.fetisherosUrl = data.url;
+
   await db.update(users).set(updates).where(eq(users.id, userId));
 }
 
-// Update user's subscription fields
+/**
+ * Update user's subscription-related fields
+ */
 export async function updateUserSubscription(
   userId: number,
   subscriptionData: {
@@ -129,17 +169,14 @@ export async function updateUserSubscription(
     .update(users)
     .set({
       ...subscriptionData,
-      updatedAt: new Date(),
+      updatedAt: now(),
     })
     .where(eq(users.id, userId));
 }
 
-// List all videos
-// export async function getAllVideos() {
-//   return db.select().from(videos).orderBy(desc(videos.createdAt));
-// }
-
-// Helper to map DB rows to VideoData
+/**
+ * Map DB row to VideoData type
+ */
 const mapToVideoData = (row: any): VideoData => ({
   id: row.id,
   title: row.title,
@@ -149,15 +186,14 @@ const mapToVideoData = (row: any): VideoData => ({
   uploaderUrl: row.uploaderUrl ?? "",
   videoUrl: row.url,
   thumbnailUrl: row.thumbnail ?? "",
-  isPublic: row.isPublic ?? "false",
+  isPublic: row.isPublic,
   views: Number(row.views),
   uploadDate: row.createdAt.toISOString(),
 });
 
 /**
- * Fetch all videos
+ * Fetch all videos (paginated + optional search)
  */
-
 export async function getAllVideos(
   page = 1,
   limit = 9,
@@ -165,10 +201,12 @@ export async function getAllVideos(
 ): Promise<{ videos: VideoData[]; total: number }> {
   const offset = (page - 1) * limit;
 
-  // Where clause for search
-  const where = search ? ilike(videos.title, `%${search}%`) : undefined;
+  // Build case-insensitive search
+  const searchWhere = search
+    ? sql`LOWER(${videos.title}) LIKE ${"%" + search.toLowerCase() + "%"}`
+    : sql`TRUE`;
 
-  // Fetch videos (paginated)
+  // Fetch videos with uploader info and tags
   const rows = await db
     .select({
       id: videos.id,
@@ -177,29 +215,38 @@ export async function getAllVideos(
       url: videos.url,
       thumbnail: videos.thumbnail,
       views: videos.views,
+      isPublic: videos.isPublic,
       createdAt: videos.createdAt,
       uploaderName: users.name,
-      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+      uploaderUrl: users.fetisherosUrl,
+      // MariaDB does not have array_agg, so use GROUP_CONCAT for tags
+      tags: sql<string>`COALESCE(GROUP_CONCAT(${videoTags.tag} SEPARATOR ','), '')`,
     })
     .from(videos)
     .leftJoin(users, eq(videos.uploaderId, users.id))
     .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
-    .where(where ?? sql`TRUE`)
-    .groupBy(videos.id, users.name)
+    .where(searchWhere)
+    .groupBy(videos.id)
     .orderBy(desc(videos.createdAt))
     .limit(limit)
     .offset(offset);
 
-  // Get total count (for pagination UI)
+  // Map tags string to array
+  const mappedRows = rows.map((row: any) => ({
+    ...row,
+    tags: row.tags ? (row.tags as string).split(",") : [],
+  }));
+
+  // Get total count for pagination
   const totalRes = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`COUNT(*)` })
     .from(videos)
-    .where(where ?? sql`TRUE`);
+    .where(searchWhere);
 
   const total = Number(totalRes[0].count);
 
   return {
-    videos: rows.map(mapToVideoData),
+    videos: mappedRows.map(mapToVideoData),
     total,
   };
 }
@@ -218,26 +265,32 @@ export async function getPublicVideos(): Promise<VideoData[]> {
       views: videos.views,
       createdAt: videos.createdAt,
       uploaderName: users.name,
-      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+      uploaderUrl: users.fetisherosUrl,
+      tags: sql<string>`COALESCE(GROUP_CONCAT(${videoTags.tag} SEPARATOR ','), '')`,
     })
     .from(videos)
     .leftJoin(users, eq(videos.uploaderId, users.id))
     .leftJoin(videoTags, eq(videos.id, videoTags.videoId))
     .where(eq(videos.isPublic, true))
-    .groupBy(videos.id, users.name);
+    .groupBy(videos.id);
 
-  return rows.map(mapToVideoData);
+  return rows.map((r: any) =>
+    mapToVideoData({ ...r, tags: r.tags ? r.tags.split(",") : [] })
+  );
 }
 
+/**
+ * Fetch video by ID and increment view count atomically
+ */
 export async function getVideoById(id: string): Promise<VideoData | null> {
   return db.transaction(async (tx) => {
-    // Increment view count atomically
+    // Increment view count
     await tx
       .update(videos)
       .set({ views: sql`${videos.views} + 1` })
       .where(eq(videos.id, id));
 
-    // Fetch updated video with joins
+    // Fetch video with uploader and tags
     const row = await tx
       .select({
         id: videos.id,
@@ -246,10 +299,11 @@ export async function getVideoById(id: string): Promise<VideoData | null> {
         url: videos.url,
         thumbnail: videos.thumbnail,
         views: videos.views,
+        isPublic: videos.isPublic,
         createdAt: videos.createdAt,
         uploaderName: users.name,
         uploaderUrl: users.fetisherosUrl,
-        tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+        tags: sql<string>`COALESCE(GROUP_CONCAT(${videoTags.tag} SEPARATOR ','), '')`,
       })
       .from(videos)
       .leftJoin(users, eq(videos.uploaderId, users.id))
@@ -259,12 +313,16 @@ export async function getVideoById(id: string): Promise<VideoData | null> {
       .limit(1);
 
     if (!row[0]) return null;
-
-    return mapToVideoData(row[0]);
+    return mapToVideoData({
+      ...row[0],
+      tags: row[0].tags ? row[0].tags.split(",") : [],
+    });
   });
 }
 
-// List videos from a specific creator
+/**
+ * Fetch videos by creator
+ */
 export async function getVideosByCreator(
   creatorId: number
 ): Promise<VideoData[]> {
@@ -279,7 +337,7 @@ export async function getVideosByCreator(
       isPublic: videos.isPublic,
       createdAt: videos.createdAt,
       uploaderName: users.name,
-      tags: sql<string[]>`COALESCE(array_agg(${videoTags.tag}), '{}')`,
+      tags: sql<string>`COALESCE(GROUP_CONCAT(${videoTags.tag} SEPARATOR ','), '')`,
     })
     .from(videos)
     .leftJoin(users, eq(videos.uploaderId, users.id))
@@ -288,9 +346,14 @@ export async function getVideosByCreator(
     .groupBy(videos.id, users.name)
     .orderBy(desc(videos.createdAt));
 
-  return rows.map(mapToVideoData);
+  return rows.map((r: any) =>
+    mapToVideoData({ ...r, tags: r.tags ? r.tags.split(",") : [] })
+  );
 }
 
+/**
+ * Insert video + tags
+ */
 export async function insertVideo(data: {
   title: string;
   description?: string;
@@ -300,33 +363,40 @@ export async function insertVideo(data: {
   tags: string[];
 }) {
   return db.transaction(async (tx) => {
-    const [video] = await tx
-      .insert(videos)
-      .values({
-        title: data.title,
-        description: data.description,
-        url: data.url,
-        thumbnail: data.thumbnail,
-        uploaderId: data.uploaderId,
-      })
-      .returning();
+    // Generate a UUID for the new video
+    const videoId = uuidv4();
 
+    // Insert the video
+    await tx.insert(videos).values({
+      id: videoId,
+      title: data.title,
+      description: data.description,
+      url: data.url,
+      thumbnail: data.thumbnail,
+      uploaderId: data.uploaderId,
+      isPublic: false,
+      views: 0,
+    });
+
+    // Insert tags if provided
     if (data.tags?.length) {
       await tx.insert(videoTags).values(
         data.tags.map((tag) => ({
-          videoId: video.id,
+          videoId,
           tag,
         }))
       );
     }
 
-    return video;
+    return videoId;
   });
 }
 
-// Update video and tags, returning the updated video
+/**
+ * Update video + tags
+ */
 export async function updateVideo(
-  id: string, // UUID
+  id: string,
   data: Partial<{
     title: string;
     description: string;
@@ -335,7 +405,7 @@ export async function updateVideo(
   }>
 ) {
   return db.transaction(async (tx) => {
-    // Update main video fields
+    // Update video
     await tx
       .update(videos)
       .set({
@@ -348,16 +418,13 @@ export async function updateVideo(
     // Update tags
     if (data.tags) {
       await tx.delete(videoTags).where(eq(videoTags.videoId, id));
-      await tx.insert(videoTags).values(
-        data.tags.map((tag) => ({
-          videoId: id,
-          tag,
-        }))
-      );
+      await tx
+        .insert(videoTags)
+        .values(data.tags.map((tag) => ({ videoId: id, tag })));
     }
 
-    // Fetch updated video including tags
-    const updatedVideo = await tx
+    // Fetch updated video with tags
+    const updatedRows = await tx
       .select({
         id: videos.id,
         title: videos.title,
@@ -365,24 +432,23 @@ export async function updateVideo(
         isPublic: videos.isPublic,
       })
       .from(videos)
-      .where(eq(videos.id, id))
-      .then(async (rows) => {
-        const video = rows[0];
-        const tagsRows = await tx
-          .select({ tag: videoTags.tag })
-          .from(videoTags)
-          .where(eq(videoTags.videoId, id));
-        return {
-          ...video,
-          tags: tagsRows.map((r) => r.tag),
-        };
-      });
+      .where(eq(videos.id, id));
 
-    return updatedVideo;
+    const updatedVideo = updatedRows[0];
+    if (!updatedVideo) return null;
+
+    const tagsRows = await tx
+      .select({ tag: videoTags.tag })
+      .from(videoTags)
+      .where(eq(videoTags.videoId, id));
+
+    return { ...updatedVideo, tags: tagsRows.map((r) => r.tag) };
   });
 }
 
-// Delete video and tags
+/**
+ * Delete a video and all its associated tags
+ */
 export async function deleteVideo(id: string) {
   return db.transaction(async (tx) => {
     await tx.delete(videoTags).where(eq(videoTags.videoId, id));
@@ -390,14 +456,14 @@ export async function deleteVideo(id: string) {
   });
 }
 
-// Get activity logs for the current user
+/**
+ * Fetch the 10 most recent activity logs for the current authenticated user
+ */
 export async function getActivityLogs() {
   const user = await getUser();
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
+  if (!user) throw new Error("User not authenticated");
 
-  return await db
+  return db
     .select({
       id: activityLogs.id,
       action: activityLogs.action,
@@ -412,6 +478,9 @@ export async function getActivityLogs() {
     .limit(10);
 }
 
+/**
+ * Insert a new activity log
+ */
 export async function insertActivityLog(data: {
   userId: number;
   action: string;
@@ -420,6 +489,9 @@ export async function insertActivityLog(data: {
   return db.insert(activityLogs).values(data);
 }
 
+/**
+ * Find the 10 most recent activity logs for a specific user
+ */
 export async function findActivityLogsByUser(userId: number) {
   return db
     .select({
@@ -434,10 +506,16 @@ export async function findActivityLogsByUser(userId: number) {
     .limit(10);
 }
 
+/**
+ * Fetch all subscription plans
+ */
 export async function getAllPlans() {
-  return await db.select().from(plans);
+  return db.select().from(plans);
 }
 
+/**
+ * Insert a new plan into the database
+ */
 export async function savePlanToDB({
   name,
   description,
@@ -449,9 +527,16 @@ export async function savePlanToDB({
   paypalPlanId: string;
   price: string;
 }) {
-  return db.insert(plans).values({ name, description, paypalPlanId, price });
+  const [id] = await db
+    .insert(plans)
+    .values({ name, description, paypalPlanId, price })
+    .$returningId();
+  return id;
 }
 
+/**
+ * Add or update a subscription for a user
+ */
 export async function updateSubscription({
   userId,
   paypalSubscriptionId,
@@ -463,26 +548,28 @@ export async function updateSubscription({
   paypalPlanId: string | number;
   startTime: string | Date;
 }) {
+  const planId =
+    typeof paypalPlanId === "string" ? parseInt(paypalPlanId) : paypalPlanId;
+
   return db.insert(subscriptions).values({
     userId,
     paypalSubscriptionId,
-    planId:
-      typeof paypalPlanId === "string" ? parseInt(paypalPlanId) : paypalPlanId,
+    planId,
     status: "ACTIVE",
     startTime: new Date(startTime),
   });
 }
 
+/**
+ * Get the current subscription status of a user
+ */
 export async function getUserSubscriptionStatus(userId: number) {
   const subscription = await db
-    .select({
-      status: subscriptions.status,
-    })
+    .select({ status: subscriptions.status })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1)
     .execute();
 
-  // subscription is an array; return status or null
   return subscription[0]?.status ?? null;
 }

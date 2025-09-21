@@ -1,40 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1754063647547,
-      "tag": "0000_tearful_the_enforcers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1755437212194,
-      "tag": "0001_fuzzy_skreet",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1755447006242,
-      "tag": "0002_perpetual_natasha_romanoff",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1756317433536,
-      "tag": "0003_brave_cloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1757610187000,
-      "tag": "0004_flashy_lifeguard",
+      "version": "5",
+      "when": 1758465156451,
+      "tag": "0000_dusty_crusher_hogan",
       "breakpoints": true
     }
   ]

@@ -1,16 +1,21 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise"; // MySQL/MariaDB driver
 import * as schema from "./schema";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-export const client = postgres({
-  host: process.env.POSTGRES_HOST,
-  port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : 5432,
-  database: process.env.POSTGRES_DB,
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
+// Create a MariaDB/MySQL connection pool
+export const client = mysql.createPool({
+  host: process.env.MARIADB_HOST,
+  port: process.env.MARIADB_PORT ? Number(process.env.MARIADB_PORT) : 3306,
+  database: process.env.MARIADB_DB,
+  user: process.env.MARIADB_USER,
+  password: process.env.MARIADB_PASSWORD,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-export const db = drizzle(client, { schema });
+// Initialize Drizzle with the MySQL/MariaDB client
+export const db = drizzle(client, { schema, mode: "default" });

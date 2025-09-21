@@ -1,65 +1,59 @@
 import {
-  pgTable,
-  serial,
+  mysqlTable,
+  int,
   varchar,
   text,
   timestamp,
-  uuid,
-  integer,
-  index,
-  uniqueIndex,
   bigint,
   boolean,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+  index,
+  uniqueIndex,
+} from "drizzle-orm/mysql-core";
+import { sql, relations } from "drizzle-orm";
 
 // USERS TABLE
-export const users = pgTable(
+export const users = mysqlTable(
   "users",
   {
-    id: serial("id").primaryKey().notNull(),
+    id: int("id").autoincrement().primaryKey().notNull(),
     name: varchar("name", { length: 100 }),
-    email: varchar("email", { length: 255 }).notNull().unique(),
+    email: varchar("email", { length: 255 }).notNull(),
     passwordHash: text("password_hash").notNull(),
     role: varchar("role", { length: 20 }).notNull().default("viewer"),
     fetisherosUrl: varchar("fetisheros_url", { length: 255 })
       .notNull()
       .default("fetisheros.com"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
   },
-  (table) => [
-    uniqueIndex("users_email_idx").on(table.email), // Explicit index
-  ]
+  (table) => [uniqueIndex("users_email_idx").on(table.email)]
 );
 
 // PLANS TABLE
-export const plans = pgTable(
+export const plans = mysqlTable(
   "plans",
   {
-    id: serial("id").primaryKey(),
+    id: int("id").autoincrement().primaryKey(),
     paypalPlanId: text("paypal_plan_id").notNull(),
     name: text("name").notNull(),
     price: text("price").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    uniqueIndex("plans_paypal_plan_id_idx").on(table.paypalPlanId), // Prevent duplicates
-  ]
+  (table) => [uniqueIndex("plans_paypal_plan_id_idx").on(table.paypalPlanId)]
 );
 
 // SUBSCRIPTIONS TABLE
-export const subscriptions = pgTable(
+export const subscriptions = mysqlTable(
   "subscriptions",
   {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     paypalSubscriptionId: text("paypal_subscription_id").notNull(),
-    planId: integer("plan_id")
+    planId: int("plan_id")
       .notNull()
       .references(() => plans.id, { onDelete: "cascade" }),
     status: text("status").notNull(),
@@ -67,7 +61,7 @@ export const subscriptions = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("subscriptions_user_plan_idx").on(table.userId, table.planId), // Prevent duplicate subscriptions
+    uniqueIndex("subscriptions_user_plan_idx").on(table.userId, table.planId),
     uniqueIndex("subscriptions_paypal_subscription_idx").on(
       table.paypalSubscriptionId
     ),
@@ -75,32 +69,33 @@ export const subscriptions = pgTable(
 );
 
 // VIDEOS TABLE
-export const videos = pgTable(
+export const videos = mysqlTable(
   "videos",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: varchar("id", { length: 36 })
+      .default(sql`(UUID())`) // Auto-generate UUID
+      .primaryKey()
+      .notNull(),
     title: text("title").notNull(),
     description: text("description"),
     url: text("url").notNull(),
     thumbnail: text("thumbnail"),
-    uploaderId: integer("uploader_id")
+    uploaderId: int("uploader_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     isPublic: boolean("is_public").notNull().default(false),
     views: bigint("views", { mode: "number" }).notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("videos_uploader_idx").on(table.uploaderId)]
 );
 
 // VIDEO TAGS TABLE
-export const videoTags = pgTable(
+export const videoTags = mysqlTable(
   "video_tags",
   {
-    id: serial("id").primaryKey(),
-    videoId: uuid("video_id")
+    id: int("id").autoincrement().primaryKey(),
+    videoId: varchar("video_id", { length: 36 })
       .notNull()
       .references(() => videos.id, { onDelete: "cascade" }),
     tag: text("tag").notNull(),
@@ -109,15 +104,15 @@ export const videoTags = pgTable(
 );
 
 // ACTIVITY LOGS TABLE
-export const activityLogs = pgTable(
+export const activityLogs = mysqlTable(
   "activity_logs",
   {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     action: text("action").notNull(),
-    timestamp: timestamp("timestamp").notNull().defaultNow(),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
     ipAddress: varchar("ip_address", { length: 45 }),
   },
   (table) => [

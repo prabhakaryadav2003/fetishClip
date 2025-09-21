@@ -3,20 +3,20 @@ import type { Config } from "drizzle-kit";
 export default {
   schema: "./lib/db/schema.ts",
   out: "./lib/db/migrations",
-  dialect: "postgresql",
+  dialect: "mysql",
   dbCredentials: {
     host:
-      process.env.POSTGRES_HOST ??
+      process.env.MARIADB_HOST ??
       (() => {
-        throw new Error("POSTGRES_HOST is not set");
+        throw new Error("MARIADB_HOST is not set");
       })(),
-    port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : 5432,
+    port: process.env.MARIADB_PORT ? Number(process.env.MARIADB_PORT) : 3306,
     database:
-      process.env.POSTGRES_DB ??
+      process.env.MARIADB_DB ??
       (() => {
-        throw new Error("POSTGRES_DB is not set");
+        throw new Error("MARIADB_DB is not set");
       })(),
-    user: process.env.POSTGRES_USER ?? "",
-    password: process.env.POSTGRES_PASSWORD ?? "",
+    user: process.env.MARIADB_USER ?? "",
+    password: process.env.MARIADB_PASSWORD ?? "",
   },
 } satisfies Config;
