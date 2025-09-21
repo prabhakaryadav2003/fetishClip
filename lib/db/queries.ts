@@ -1,3 +1,5 @@
+"use server";
+
 import { desc, and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "./drizzle";
 import {

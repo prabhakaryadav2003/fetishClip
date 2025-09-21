@@ -14,6 +14,7 @@ async function seedAdmin() {
     .select()
     .from(users)
     .where(eq(users.email, email));
+
   if (existingUser.length > 0) {
     console.log("Admin user already exists, skipping...");
     return;
@@ -23,14 +24,12 @@ async function seedAdmin() {
 
   const [user] = await db
     .insert(users)
-    .values([
-      {
-        email,
-        passwordHash,
-        role: "owner",
-      },
-    ])
-    .returning();
+    .values({
+      email,
+      passwordHash,
+      role: "owner",
+    })
+    .$returningId();
 
   console.log("Admin user created:", user);
 }
