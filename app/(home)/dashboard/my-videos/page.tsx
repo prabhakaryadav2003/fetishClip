@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Upload } from "lucide-react";
-import VideoModal from "@/components/VideoModal";
+import { VideoModal } from "@/components/VideoModal";
 import { VideoForm } from "@/types/global";
 import { z } from "zod";
 import { getVideosByCreator } from "./actions";
 import { VideoData } from "@/types/videoData";
-import AdminVideoCard from "@/components/AdminVideoCard";
+import { AdminVideoCard } from "@/components/AdminVideoCard";
 
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB

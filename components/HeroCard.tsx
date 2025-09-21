@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function Hero() {
+function HeroCard() {
   return (
     <section className="w-full py-8 px-4 bg-gray-800 text-white flex flex-col items-center sm:py-16">
       <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-center mb-4">
@@ -33,3 +33,5 @@ export default function Hero() {
     </section>
   );
 }
+
+export { HeroCard };

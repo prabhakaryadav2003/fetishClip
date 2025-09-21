@@ -2,7 +2,7 @@ import { formatViews } from "@/lib/utils";
 import { VideoData } from "@/types/videoData";
 import { Eye, User, ExternalLink, Calendar } from "lucide-react";
 
-export default function VideoMeta({ video }: { video: VideoData }) {
+function VideoMeta({ video }: { video: VideoData }) {
   const uploadedDate = new Date(video.uploadDate).toLocaleDateString(
     undefined,
     {
@@ -76,3 +76,5 @@ export default function VideoMeta({ video }: { video: VideoData }) {
     </section>
   );
 }
+
+export { VideoMeta };

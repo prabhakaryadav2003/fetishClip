@@ -321,4 +321,4 @@ const AdminVideoCard = ({
   );
 };
 
-export default AdminVideoCard;
+export { AdminVideoCard };

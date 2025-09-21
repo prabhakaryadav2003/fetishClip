@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
@@ -8,7 +9,7 @@ interface PayPalCheckoutProps {
   cart: CartItem[];
 }
 
-export default function PayPalCheckout({ cart }: PayPalCheckoutProps) {
+function PayPalCheckout({ cart }: PayPalCheckoutProps) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -80,3 +81,5 @@ export default function PayPalCheckout({ cart }: PayPalCheckoutProps) {
     </div>
   );
 }
+
+export { PayPalCheckout };

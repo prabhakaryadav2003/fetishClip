@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, DragEvent, useState, useEffect } from "react";
+import { useRef, DragEvent, useState } from "react";
 import clsx from "clsx";
 
 interface FileDropProps {
@@ -13,7 +13,7 @@ interface FileDropProps {
   isImage?: boolean; // true if preview should be shown as <img>
 }
 
-export default function FileDrop({
+function FileDrop({
   label,
   accept,
   maxSize,
@@ -80,3 +80,5 @@ export default function FileDrop({
     </div>
   );
 }
+
+export { FileDrop };

@@ -6,11 +6,7 @@ import Link from "next/link";
 import Logo from "@/public/images/logo.png";
 import { usePathname } from "next/navigation";
 
-export default function ConsentWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function ConsentWrapper({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   const [agreed, setAgreed] = useState(false);
 
@@ -110,3 +106,5 @@ export default function ConsentWrapper({
     </>
   );
 }
+
+export { ConsentWrapper };

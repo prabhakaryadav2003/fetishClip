@@ -122,7 +122,7 @@ export function SocialLinks({
 }
 
 // Main Footer
-export default function Footer({
+function Footer({
   brand = "FetishClip",
   logoSrc = Logo.src,
   links = [
@@ -149,3 +149,5 @@ export default function Footer({
     </footer>
   );
 }
+
+export { Footer };

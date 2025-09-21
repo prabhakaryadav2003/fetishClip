@@ -4,11 +4,7 @@ interface SearchBarProps {
   onEnter?: () => void;
 }
 
-export default function SearchBar({
-  value,
-  onChange,
-  onEnter,
-}: SearchBarProps) {
+function SearchBar({ value, onChange, onEnter }: SearchBarProps) {
   return (
     <input
       type="text"
@@ -22,3 +18,5 @@ export default function SearchBar({
     />
   );
 }
+
+export { SearchBar };

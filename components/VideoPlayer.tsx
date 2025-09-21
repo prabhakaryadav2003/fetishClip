@@ -8,7 +8,7 @@ interface VideoPlayerProps {
   videoId: string;
 }
 
-export default function VideoPlayer({ videoId }: VideoPlayerProps) {
+function VideoPlayer({ videoId }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const playerRef = useRef<any>(null); // Plyr instance
@@ -105,3 +105,5 @@ export default function VideoPlayer({ videoId }: VideoPlayerProps) {
     </div>
   );
 }
+
+export { VideoPlayer };

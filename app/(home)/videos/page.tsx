@@ -1,9 +1,11 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
-import VideoCard from "@/components/VideoCard";
-import Pagination from "@/components/Pagination";
-import SearchBar from "@/components/SearchBar";
+import { VideoCard } from "@/components/VideoCard";
+import { Pagination } from "@/components/Pagination";
+import { SearchBar } from "@/components/SearchBar";
 import type { VideoData } from "@/types/videoData";
 
 const ITEMS_PER_PAGE = 9;

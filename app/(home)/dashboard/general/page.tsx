@@ -11,10 +11,7 @@ import { CardHeader } from "@/components/ui/card";
 import { CardContent } from "@/components/ui/card";
 import { CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
 import { updateAccount } from "@/app/(login)/actions";
-
-// Tell Next.js this is a fully client-side page
 
 type ActionState = {
   name?: string;

@@ -1,10 +1,11 @@
-// app/(home)/videos/[id]/[title]/page.tsx
 import { getVideoById } from "@/lib/db/queries";
-import VideoPlayer from "@/components/VideoPlayer";
-import VideoMeta from "@/components/VideoMeta";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { VideoMeta } from "@/components/VideoMeta";
 import { generateVideoSchema } from "./schema";
 import { slugify } from "@/lib/utils";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

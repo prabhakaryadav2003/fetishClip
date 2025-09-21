@@ -47,4 +47,4 @@ const VideoCard = ({ video }: VideoCardProps) => {
   );
 };
 
-export default VideoCard;
+export { VideoCard };

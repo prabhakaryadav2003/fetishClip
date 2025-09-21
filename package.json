@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --turbopack",
     "start": "next start",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
@@ -27,7 +27,7 @@
     "hls.js": "^1.6.7",
     "jose": "^6.0.11",
     "lucide-react": "^0.511.0",
-    "next": "15.4.0-canary.47",
+    "next": "15.5.3",
     "plyr": "^3.7.8",
     "postcss": "^8.5.3",
     "postgres": "^3.4.5",

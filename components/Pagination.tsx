@@ -83,4 +83,4 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: Props) => {
   );
 };
 
-export default Pagination;
+export { Pagination };

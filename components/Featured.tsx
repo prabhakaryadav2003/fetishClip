@@ -1,13 +1,13 @@
 "use client";
 
-import VideoCard from "@/components/VideoCard";
+import { VideoCard } from "@/components/VideoCard";
 import { VideoData } from "@/types/videoData";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { slugify } from "@/lib/utils";
 
-export default function Featured() {
+function Featured() {
   const [videos, setVideos] = useState<VideoData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,3 +72,5 @@ export default function Featured() {
     </section>
   );
 }
+
+export { Featured };

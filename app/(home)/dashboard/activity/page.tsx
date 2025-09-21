@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Settings,
@@ -13,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { ActivityType } from "@/lib/db/schema";
-import { getActivityLogs } from "@/lib/db/queries";
+import getUserActivity from "./action";
 
 // Mapping of activity types to corresponding icons
 const iconMap: Record<ActivityType, React.ElementType> = {
@@ -86,7 +88,7 @@ function formatAction(actionRaw: string): string {
 }
 
 export default async function ActivityPage() {
-  const logs = await getActivityLogs();
+  const logs = await getUserActivity();
 
   return (
     <section className="flex-1 p-4 lg:p-8">

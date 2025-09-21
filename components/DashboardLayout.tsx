@@ -33,10 +33,7 @@ const iconMap: Record<string, React.ElementType> = {
   Shield,
 };
 
-export default function DashboardLayoutClient({
-  children,
-  navItems,
-}: DashboardLayoutProps) {
+function DashboardLayoutClient({ children, navItems }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -88,3 +85,5 @@ export default function DashboardLayoutClient({
     </div>
   );
 }
+
+export { DashboardLayoutClient };

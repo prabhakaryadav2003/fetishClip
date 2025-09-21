@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { Upload } from "lucide-react";
-import VideoModal from "@/components/VideoModal";
+import { useRouter } from "next/navigation";
+import { VideoModal } from "@/components/VideoModal";
 import { VideoForm } from "@/types/global";
 import { z } from "zod";
 import { getAllVideos } from "./actions";
 import { VideoData } from "@/types/videoData";
-import AdminVideoCard from "@/components/AdminVideoCard";
-import { redirect } from "next/navigation";
+import { AdminVideoCard } from "@/components/AdminVideoCard";
 
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
 
-// Schema for validation
+// Schema for validation (client-side only)
 const videoSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -41,6 +41,8 @@ export default function VideoManagementPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setLoading] = useState(false);
 
+  const router = useRouter();
+
   // Load videos on mount
   useEffect(() => {
     loadVideos();
@@ -59,7 +61,7 @@ export default function VideoManagementPage() {
       ) {
         setVideos(response.data.videos);
       } else {
-        redirect("/pricing");
+        router.push("/pricing");
       }
     } catch (err) {
       console.error(err);
@@ -119,18 +121,22 @@ export default function VideoManagementPage() {
         body: formData,
       });
 
-      const data = await res.json();
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Upload failed");
+      }
 
+      const data = await res.json();
       if (data?.error) {
         alert(`Upload failed: ${data.error}`);
         return;
       }
 
-      await loadVideos(); // Refresh list
-      resetForm(); // Close modal and reset form
-    } catch (err) {
+      resetForm();
+      loadVideos();
+    } catch (err: any) {
       console.error("Upload error:", err);
-      alert("Upload failed");
+      alert(err.message || "Upload failed");
     } finally {
       setIsUploading(false);
     }

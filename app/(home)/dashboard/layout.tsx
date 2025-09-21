@@ -1,5 +1,7 @@
 import { getUser } from "@/lib/db/queries";
-import DashboardLayoutClient from "@/components/DashboardLayout";
+import { DashboardLayoutClient } from "@/components/DashboardLayout";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,

@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import UserMenu from "@/components/UserMenu";
-import { Dot, Key, Menu, X } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
+import { Dot, Menu, X } from "lucide-react";
 import Logo from "@/public/images/logo.png";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function Navbar() {
+function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
@@ -114,3 +114,5 @@ export default function Navbar() {
     </header>
   );
 }
+
+export { Navbar };

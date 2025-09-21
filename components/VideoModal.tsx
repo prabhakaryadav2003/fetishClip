@@ -2,7 +2,7 @@
 
 import { Dispatch, SetStateAction } from "react";
 import { X } from "lucide-react";
-import FileDrop from "./FileDrop";
+import { FileDrop } from "./FileDrop";
 import { VideoForm } from "@/types/global";
 
 interface VideoModalProps {
@@ -12,10 +12,10 @@ interface VideoModalProps {
   handleUpload: () => void;
   resetForm: () => void;
   isEditing: string | null;
-  isUploading: boolean; // ✅ new prop
+  isUploading: boolean;
 }
 
-export default function VideoModal({
+function VideoModal({
   form,
   setForm,
   formErrors,
@@ -148,3 +148,5 @@ export default function VideoModal({
     </div>
   );
 }
+
+export { VideoModal };
