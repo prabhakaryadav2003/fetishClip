@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 import { slugify } from "@/lib/utils";
 import { useState } from "react";
 import { Edit2, Eye, Trash2 } from "lucide-react";

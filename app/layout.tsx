@@ -4,6 +4,7 @@ import { getUser, getAllVideos } from "@/lib/db/queries";
 import { SWRConfig } from "swr";
 import favicon from "@/public/images/favicon.ico";
 import { Montserrat } from "next/font/google";
+import Script from "next/script";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -35,11 +36,24 @@ export default function RootLayout({
         <link rel="icon" href={favicon.src} />
       </head>
       <body className="min-h-[100dvh] bg-gray-50">
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-XL78Y03SNS"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-XL78Y03SNS');
+          `}
+        </Script>
+
         <SWRConfig
           value={{
             fallback: {
-              // We do NOT await here
-              // Only components that read this data will suspend
               "/api/user": getUser(),
               "/api/video": getAllVideos(),
             },

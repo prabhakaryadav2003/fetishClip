@@ -15,6 +15,7 @@ import {
 import { ActivityType } from "@/lib/db/schema";
 import { getActivityLogs } from "@/lib/db/queries";
 
+// Mapping of activity types to corresponding icons
 const iconMap: Record<ActivityType, React.ElementType> = {
   [ActivityType.SIGN_UP]: UserPlus,
   [ActivityType.SIGN_IN]: UserCog,
@@ -29,6 +30,7 @@ const iconMap: Record<ActivityType, React.ElementType> = {
   [ActivityType.ADD_VIDEO]: Video,
 };
 
+// Utility: Time difference in human-readable form
 function getRelativeTime(date: Date) {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -40,9 +42,11 @@ function getRelativeTime(date: Date) {
     return `${Math.floor(diffInSeconds / 3600)} hours ago`;
   if (diffInSeconds < 604800)
     return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
   return date.toLocaleDateString();
 }
 
+// Extract base action type
 function parseAction(action: string): ActivityType {
   const base = action.split(":")[0] as ActivityType;
   return base in ActivityType
@@ -50,8 +54,9 @@ function parseAction(action: string): ActivityType {
     : ActivityType.UPDATE_ACCOUNT;
 }
 
+// Convert raw action string to readable sentence
 function formatAction(actionRaw: string): string {
-  const [action, payload] = actionRaw.split(":");
+  const [action] = actionRaw.split(":");
   switch (action) {
     case ActivityType.SIGN_UP:
       return "You signed up";
@@ -88,6 +93,7 @@ export default async function ActivityPage() {
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         Activity Log
       </h1>
+
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>

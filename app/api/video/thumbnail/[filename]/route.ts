@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-// Small helper to map extension -> MIME type
+// Helper to map extension -> MIME type
 function getMimeType(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
   switch (ext) {
@@ -22,17 +22,27 @@ function getMimeType(filename: string): string {
 
 export async function GET(
   req: Request,
-  { params }: { params: { filename: string } }
+  ctx: {
+    params: Promise<{ filename: string }>;
+  }
 ) {
   try {
-    const filePath = path.join(process.cwd(), "thumbnail", params.filename);
+    // normalize params (await if it’s a Promise)
+    const resolvedParams = await ctx.params;
+    const { filename } = resolvedParams;
+
+    if (!filename) {
+      return new NextResponse("Filename not provided", { status: 400 });
+    }
+
+    const filePath = path.join(process.cwd(), "thumbnail", filename);
 
     if (!fs.existsSync(filePath)) {
       return new NextResponse("Not found", { status: 404 });
     }
 
     const fileBuffer = fs.readFileSync(filePath);
-    const mimeType = getMimeType(params.filename);
+    const mimeType = getMimeType(filename);
 
     return new NextResponse(fileBuffer, {
       headers: {

@@ -1,0 +1,33 @@
+# Node modules
+
+node_modules/
+
+# Build output
+
+.next/
+out/
+
+# Temporary or generated code
+
+drizzle/generated/
+lib/db/seed.ts
+scripts/
+tmp/
+dist/
+
+# Public assets (images, videos, etc.)
+
+public/videos/**
+public/images/**
+video-stream/\*
+
+# Logs
+
+\*.log
+
+# Optional: Ignore environment files if you don't want ESLint touching them
+
+.env
+.env.local
+.env.development
+.env.production

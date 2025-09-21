@@ -1,4 +1,4 @@
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 
 export function generateVideoSchema(video: VideoData) {
   return {

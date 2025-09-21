@@ -10,7 +10,7 @@ import {
 } from "./schema";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
-import { VideoData } from "../video/videoData";
+import { VideoData } from "../../types/videoData";
 import { sql } from "drizzle-orm";
 
 export async function deleteUser(userId: number) {
@@ -471,4 +471,18 @@ export async function updateSubscription({
     status: "ACTIVE",
     startTime: new Date(startTime),
   });
+}
+
+export async function getUserSubscriptionStatus(userId: number) {
+  const subscription = await db
+    .select({
+      status: subscriptions.status,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+    .limit(1)
+    .execute();
+
+  // subscription is an array; return status or null
+  return subscription[0]?.status ?? null;
 }

@@ -1,5 +1,5 @@
 import { formatViews } from "@/lib/utils";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 import { Eye, User, ExternalLink, Calendar } from "lucide-react";
 
 export default function VideoMeta({ video }: { video: VideoData }) {

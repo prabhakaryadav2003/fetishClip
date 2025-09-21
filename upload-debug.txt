@@ -1,0 +1,56 @@
+[2025-09-13T17:50:31.483Z] === New upload started ===
+[2025-09-13T17:50:31.503Z] Parsed fields: {
+  "rawTitle": null,
+  "description": null,
+  "tags": []
+}
+[2025-09-13T17:50:31.509Z] Error: Missing required fields
+[2025-09-13T17:52:13.838Z] === New upload started ===
+[2025-09-13T17:52:13.846Z] Parsed fields: {
+  "rawTitle": null,
+  "description": null,
+  "tags": []
+}
+[2025-09-13T17:52:13.850Z] Error: Missing required fields
+[2025-09-13T17:59:19.694Z] === New upload started ===
+[2025-09-13T17:59:19.720Z] FormData entry: title ghf
+[2025-09-13T17:59:19.726Z] FormData entry: description ghfg
+[2025-09-13T17:59:19.731Z] FormData entry: tags bv
+[2025-09-13T17:59:19.737Z] FormData entry: thumbnail DOOBOO.png
+[2025-09-13T17:59:19.742Z] FormData entry: videoFile rust+app.mp4
+[2025-09-13T17:59:19.752Z] Parsed fields: {
+  "rawTitle": "ghf",
+  "description": "ghfg",
+  "tags": [
+    "bv"
+  ],
+  "thumbnailFile": "DOOBOO.png",
+  "videoFile": "rust+app.mp4"
+}
+[2025-09-13T17:59:19.767Z] Thumbnail saved: C:\Users\PRABHAKAR\Desktop\GitHub\fetishClip\thumbnail\ghf.jpg
+[2025-09-13T17:59:20.116Z] Video backup saved: C:\Users\PRABHAKAR\Desktop\GitHub\fetishClip\video-stream\backup\ghf_1757786359772.mp4
+[2025-09-13T17:59:47.856Z] Worker message: {
+  "status": "done",
+  "dir": "C:\\Users\\PRABHAKAR\\Desktop\\GitHub\\fetishClip\\video-stream\\ghf"
+}
+[2025-09-13T18:02:32.022Z] === New upload started ===
+[2025-09-13T18:02:32.030Z] FormData entry: title this is a test video again
+[2025-09-13T18:02:32.036Z] FormData entry: description We are testing description, is it looking good or not
+[2025-09-13T18:02:32.044Z] FormData entry: tags test
+[2025-09-13T18:02:32.050Z] FormData entry: thumbnail Binghamton-31.jpg
+[2025-09-13T18:02:32.056Z] FormData entry: videoFile rust+app.mp4
+[2025-09-13T18:02:32.062Z] Parsed fields: {
+  "rawTitle": "this is a test video again",
+  "description": "We are testing description, is it looking good or not",
+  "tags": [
+    "test"
+  ],
+  "thumbnailFile": "Binghamton-31.jpg",
+  "videoFile": "rust+app.mp4"
+}
+[2025-09-13T18:02:32.098Z] Thumbnail saved: C:\Users\PRABHAKAR\Desktop\GitHub\fetishClip\thumbnail\this-is-a-test-video-again.jpg
+[2025-09-13T18:02:32.406Z] Video backup saved: C:\Users\PRABHAKAR\Desktop\GitHub\fetishClip\video-stream\backup\this-is-a-test-video-again_1757786552104.mp4
+[2025-09-13T18:03:02.514Z] Worker message: {
+  "status": "done",
+  "dir": "C:\\Users\\PRABHAKAR\\Desktop\\GitHub\\fetishClip\\video-stream\\this-is-a-test-video-again"
+}

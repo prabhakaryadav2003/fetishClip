@@ -6,13 +6,14 @@ import VideoModal from "@/components/VideoModal";
 import { VideoForm } from "@/types/global";
 import { z } from "zod";
 import { getAllVideos } from "./actions";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 import AdminVideoCard from "@/components/AdminVideoCard";
 import { redirect } from "next/navigation";
 
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
 
+// Schema for validation
 const videoSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -40,32 +41,35 @@ export default function VideoManagementPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setLoading] = useState(false);
 
+  // Load videos on mount
   useEffect(() => {
-    const loadVideos = async () => {
-      setLoading(true);
-      try {
-        const response = await getAllVideos();
-
-        if (
-          response.success &&
-          typeof response.data === "object" &&
-          "videos" in response.data &&
-          Array.isArray(response.data.videos) &&
-          response.data.videos.length > 0
-        ) {
-          const { videos, total } = response.data;
-          setVideos(videos);
-        } else {
-          redirect("/pricing");
-        }
-      } catch (err) {
-        alert("Failed to fetch videos");
-      }
-      setLoading(false);
-    };
     loadVideos();
   }, []);
 
+  const loadVideos = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllVideos();
+
+      if (
+        response.success &&
+        typeof response.data === "object" &&
+        "videos" in response.data &&
+        Array.isArray(response.data.videos)
+      ) {
+        setVideos(response.data.videos);
+      } else {
+        redirect("/pricing");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch videos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset form and modal state
   const resetForm = () => {
     setForm({});
     setFormErrors({});
@@ -73,6 +77,7 @@ export default function VideoManagementPage() {
     setShowModal(false);
   };
 
+  // Upload or update video
   const handleUpload = async () => {
     const tagsArray = (form.tagsInput || "")
       .split(",")
@@ -121,26 +126,8 @@ export default function VideoManagementPage() {
         return;
       }
 
-      // Refresh list after successful upload
-      try {
-        const response = await getAllVideos();
-        if (
-          response.success &&
-          typeof response.data === "object" &&
-          "videos" in response.data &&
-          Array.isArray(response.data.videos) &&
-          response.data.videos.length > 0
-        ) {
-          const { videos, total } = response.data;
-          setVideos(videos);
-        } else {
-          redirect("/pricing");
-        }
-      } catch (err) {
-        alert("Failed to fetch videos");
-      }
-
-      resetForm();
+      await loadVideos(); // Refresh list
+      resetForm(); // Close modal and reset form
     } catch (err) {
       console.error("Upload error:", err);
       alert("Upload failed");
@@ -149,7 +136,7 @@ export default function VideoManagementPage() {
     }
   };
 
-  // Handle update
+  // Handle video update from child component
   const handleUpdated = (
     updatedFields: Partial<VideoData> & { id: string }
   ) => {
@@ -160,7 +147,7 @@ export default function VideoManagementPage() {
     );
   };
 
-  // Handle delete
+  // Handle video deletion from child component
   const handleDeleted = (id: string) => {
     setVideos((prev) => prev.filter((v) => v.id !== id));
   };
@@ -170,7 +157,7 @@ export default function VideoManagementPage() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
+          <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
             Video Management (Admin)
           </h1>
           <button
@@ -184,7 +171,7 @@ export default function VideoManagementPage() {
           </button>
         </div>
 
-        {/* Video Grid */}
+        {/* Video List */}
         <div className="flex flex-col divide-y divide-gray-200 mt-2">
           {isLoading ? (
             <p className="text-sm text-gray-500 p-4 text-center">
@@ -195,10 +182,10 @@ export default function VideoManagementPage() {
               No videos found.
             </p>
           ) : (
-            videos.map((v) => (
+            videos.map((video) => (
               <AdminVideoCard
-                key={v.id}
-                video={v}
+                key={video.id}
+                video={video}
                 onUpdated={handleUpdated}
                 onDeleted={handleDeleted}
               />
@@ -207,7 +194,7 @@ export default function VideoManagementPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Upload/Edit Modal */}
       {showModal && (
         <VideoModal
           form={form}

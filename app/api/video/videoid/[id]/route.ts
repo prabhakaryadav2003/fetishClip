@@ -9,18 +9,16 @@ function errorResponse(message: string, status: number = 500) {
 // GET video
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
-    if (!id) {
-      return errorResponse("Video ID is required", 400);
-    }
+  const resolvedParams = await ctx.params;
+  const { id } = resolvedParams;
 
+  if (!id) return errorResponse("Video ID is required", 400);
+
+  try {
     const video = await getVideoById(id);
-    if (!video) {
-      return errorResponse("Video not found", 404);
-    }
+    if (!video) return errorResponse("Video not found", 404);
 
     return NextResponse.json({ success: true, data: video }, { status: 200 });
   } catch (err) {
@@ -32,18 +30,17 @@ export async function GET(
 // PATCH video
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
-    if (!id) {
-      return errorResponse("Video ID is required", 400);
-    }
+  const resolvedParams = await ctx.params;
+  const { id } = resolvedParams;
 
+  if (!id) return errorResponse("Video ID is required", 400);
+
+  try {
     const body = await req.json();
-    if (!body || typeof body !== "object") {
+    if (!body || typeof body !== "object")
       return errorResponse("Invalid request body", 400);
-    }
 
     if (
       body.title === undefined &&
@@ -54,7 +51,6 @@ export async function PATCH(
       return errorResponse("No fields provided to update", 400);
     }
 
-    // Normalize isPublic to boolean
     const isPublic =
       body.isPublic === true || body.isPublic === "true" || body.isPublic === 1;
 
@@ -69,8 +65,8 @@ export async function PATCH(
       { success: true, message: "Video updated successfully", data: updated },
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Update failed:", error);
+  } catch (err) {
+    console.error("Update failed:", err);
     return errorResponse("Failed to update video");
   }
 }
@@ -78,21 +74,21 @@ export async function PATCH(
 // DELETE video
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
-    if (!id) {
-      return errorResponse("Video ID is required", 400);
-    }
+  const resolvedParams = await ctx.params;
+  const { id } = resolvedParams;
 
+  if (!id) return errorResponse("Video ID is required", 400);
+
+  try {
     await deleteVideo(id);
     return NextResponse.json(
       { success: true, message: "Video deleted successfully" },
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Delete failed:", error);
+  } catch (err) {
+    console.error("Delete failed:", err);
     return errorResponse("Failed to delete video");
   }
 }

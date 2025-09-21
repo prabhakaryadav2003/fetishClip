@@ -1,28 +1,49 @@
 import { db } from "./drizzle";
 import { users, plans } from "./schema";
+import { eq } from "drizzle-orm";
 import { hashPassword } from "@/lib/auth/session";
 import { createPayPalPlan } from "@/lib/payments/createPlan";
 import { createPayPalProduct } from "@/lib/payments/createProductId";
 
-async function seed() {
+async function seedAdmin() {
   const email = "test@test.com";
   const password = "admin123";
+
+  // Check if user already exists
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email));
+  if (existingUser.length > 0) {
+    console.log("Admin user already exists, skipping...");
+    return;
+  }
+
   const passwordHash = await hashPassword(password);
 
   const [user] = await db
     .insert(users)
     .values([
       {
-        email: email,
-        passwordHash: passwordHash,
+        email,
+        passwordHash,
         role: "owner",
       },
     ])
     .returning();
 
-  console.log("Initial user created:", user);
+  console.log("Admin user created:", user);
+}
 
+async function seedPlan() {
   console.log("Seeding PayPal product and plans...");
+
+  // Check if plans already exist
+  const existingPlans = await db.select().from(plans);
+  if (existingPlans.length > 0) {
+    console.log("Plans already exist, skipping...");
+    return;
+  }
 
   // Create PayPal Product
   const productId = await createPayPalProduct({
@@ -57,15 +78,20 @@ async function seed() {
     );
   }
 
-  console.log("Seeding completed!");
+  console.log("🎉 Seeding Plan completed!");
 }
 
-seed()
-  .catch((error) => {
-    console.error("Seed process failed:", error);
+async function main() {
+  try {
+    await seedAdmin();
+    await seedPlan();
+    console.log("🚀 All seeding completed successfully!");
+  } catch (error) {
+    console.error("Seeding failed:", error);
     process.exit(1);
-  })
-  .finally(() => {
-    console.log("Seed process finished. Exiting...");
+  } finally {
     process.exit(0);
-  });
+  }
+}
+
+main();

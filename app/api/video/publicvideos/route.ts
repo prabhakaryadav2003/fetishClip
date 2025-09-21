@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicVideos } from "@/lib/db/queries";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 
 export async function GET() {
   try {

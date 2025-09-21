@@ -7,13 +7,14 @@ export interface VideoData {
   videoUrl: string;
   thumbnailUrl: string;
   views: number;
-  uploaderUrl?: string;
-  isPublic?: string;
   uploadDate: string;
+  uploaderUrl?: string;
+  uploaderId?: number;
+  isPublic?: string;
 }
 
 export async function getVideoData(id: string): Promise<VideoData> {
-  // Mock
+  // Mock Video
   return {
     id,
     title: "Model Highlights – June",

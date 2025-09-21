@@ -6,7 +6,7 @@ import VideoModal from "@/components/VideoModal";
 import { VideoForm } from "@/types/global";
 import { z } from "zod";
 import { getVideosByCreator } from "./actions";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 import AdminVideoCard from "@/components/AdminVideoCard";
 
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB

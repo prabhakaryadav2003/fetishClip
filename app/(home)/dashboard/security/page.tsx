@@ -1,30 +1,39 @@
 "use client";
 
+import { useActionState } from "react";
+import { updatePassword, deleteAccount } from "@/app/(login)/actions";
+import { PasswordState, DeleteState } from "@/types/global";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Lock, Trash2, Loader2 } from "lucide-react";
-import { useActionState } from "react";
-import { updatePassword, deleteAccount } from "@/app/(login)/actions";
-import { PasswordState, DeleteState } from "@/types/global";
 
 export default function SecurityPage() {
+  // Password update action
   const [passwordState, passwordAction, isPasswordPending] = useActionState<
     PasswordState,
     FormData
-  >(updatePassword, {});
+  >(updatePassword, {
+    success: "",
+    error: "",
+  });
 
+  // Account delete action
   const [deleteState, deleteAction, isDeletePending] = useActionState<
     DeleteState,
     FormData
-  >(deleteAccount, {});
+  >(deleteAccount, {
+    error: "",
+  });
 
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
+      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         Security Settings
       </h1>
+
+      {/* Update Password Card */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Password</CardTitle>
@@ -32,9 +41,7 @@ export default function SecurityPage() {
         <CardContent>
           <form className="space-y-4" action={passwordAction}>
             <div>
-              <Label htmlFor="current-password" className="mb-2">
-                Current Password
-              </Label>
+              <Label htmlFor="current-password">Current Password</Label>
               <Input
                 id="current-password"
                 name="currentPassword"
@@ -43,13 +50,11 @@ export default function SecurityPage() {
                 required
                 minLength={8}
                 maxLength={100}
-                defaultValue={passwordState.currentPassword}
               />
             </div>
+
             <div>
-              <Label htmlFor="new-password" className="mb-2">
-                New Password
-              </Label>
+              <Label htmlFor="new-password">New Password</Label>
               <Input
                 id="new-password"
                 name="newPassword"
@@ -58,13 +63,11 @@ export default function SecurityPage() {
                 required
                 minLength={8}
                 maxLength={100}
-                defaultValue={passwordState.newPassword}
               />
             </div>
+
             <div>
-              <Label htmlFor="confirm-password" className="mb-2">
-                Confirm New Password
-              </Label>
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
               <Input
                 id="confirm-password"
                 name="confirmPassword"
@@ -72,15 +75,17 @@ export default function SecurityPage() {
                 required
                 minLength={8}
                 maxLength={100}
-                defaultValue={passwordState.confirmPassword}
               />
             </div>
+
+            {/* Feedback */}
             {passwordState.error && (
-              <p className="text-red-500 text-sm">{passwordState.error}</p>
+              <p className="text-sm text-red-500">{passwordState.error}</p>
             )}
             {passwordState.success && (
-              <p className="text-green-500 text-sm">{passwordState.success}</p>
+              <p className="text-sm text-green-500">{passwordState.success}</p>
             )}
+
             <Button
               type="submit"
               className="bg-red-500 hover:bg-red-600 text-white"
@@ -102,19 +107,18 @@ export default function SecurityPage() {
         </CardContent>
       </Card>
 
+      {/* Delete Account Card */}
       <Card>
         <CardHeader>
           <CardTitle>Delete Account</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500 mb-4">
-            Account deletion is non-reversable. Please proceed with caution.
+            Account deletion is non-reversible. Please proceed with caution.
           </p>
-          <form action={deleteAction} className="space-y-4">
+          <form className="space-y-4" action={deleteAction}>
             <div>
-              <Label htmlFor="delete-password" className="mb-2">
-                Confirm Password
-              </Label>
+              <Label htmlFor="delete-password">Confirm Password</Label>
               <Input
                 id="delete-password"
                 name="password"
@@ -122,12 +126,14 @@ export default function SecurityPage() {
                 required
                 minLength={8}
                 maxLength={100}
-                defaultValue={deleteState.password}
               />
             </div>
+
+            {/* Feedback */}
             {deleteState.error && (
-              <p className="text-red-500 text-sm">{deleteState.error}</p>
+              <p className="text-sm text-red-500">{deleteState.error}</p>
             )}
+
             <Button
               type="submit"
               variant="destructive"

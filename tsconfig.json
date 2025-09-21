@@ -30,5 +30,13 @@
     ".next/types/**/*.ts",
     "workers/videoProcessor.js"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "drizzle/generated",
+    "public/videos",
+    "scripts",
+    "tmp",
+    "video-stream"
+  ]
 }

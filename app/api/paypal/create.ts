@@ -8,9 +8,14 @@ export default async function handler(
 ) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { name, description, price } = req.body;
+  const { name, description, price, productId } = req.body;
   try {
-    const paypalPlanId = await createPayPalPlan(name, description, price);
+    const paypalPlanId = await createPayPalPlan(
+      name,
+      description,
+      price,
+      productId
+    );
     await savePlanToDB({ name, description, paypalPlanId, price });
     res.status(200).json({ success: true, paypalPlanId });
   } catch (error) {

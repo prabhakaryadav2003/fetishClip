@@ -1,13 +1,20 @@
 "use client";
 
 import { useActionState } from "react";
+import useSWR from "swr";
+import { Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+
 import { updateAccount } from "@/app/(login)/actions";
-import useSWR from "swr";
+
+// Tell Next.js this is a fully client-side page
 
 type ActionState = {
   name?: string;
@@ -64,7 +71,7 @@ function AccountForm({
         <Input
           id="url"
           name="url"
-          placeholder="Enter your fetisheros URL (e.g. www.fetisheros.com/yourname)"
+          placeholder="Enter your FetishEros URL"
           defaultValue={state.fetisherosUrl ?? urlValue}
           required
         />
@@ -74,10 +81,10 @@ function AccountForm({
 }
 
 export default function GeneralPage() {
-  // SWR fetches the current user info for field pre-fill (cache key can be anything, e.g. '/api/user')
+  // Fetch user info for pre-fill
   const { data: user, isLoading } = useSWR("/api/user", fetcher);
 
-  // useActionState lets you run async server actions for <form action={formAction}>
+  // Async server action state
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
     {}

@@ -4,57 +4,58 @@ import { useState, useEffect } from "react";
 import VideoCard from "@/components/VideoCard";
 import Pagination from "@/components/Pagination";
 import SearchBar from "@/components/SearchBar";
-import { VideoData } from "@/lib/video/videoData";
+import type { VideoData } from "@/types/videoData";
 
 const ITEMS_PER_PAGE = 9;
 
 export default function VideosPage() {
   const [videos, setVideos] = useState<VideoData[]>([]);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState(""); // input box state
+  const [searchInput, setSearchInput] = useState(""); // What user types
+  const [search, setSearch] = useState(""); // What is actually searched
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
 
-  // Fetch paginated videos from API
+  // Fetch videos based on search & page
   useEffect(() => {
     const fetchVideos = async () => {
       try {
         setLoading(true);
-        setError(false);
-        const res = await fetch(
-          `/api/video/allvideos?page=${page}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
-            search
-          )}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch videos");
-        const data = await res.json();
+        setError("");
 
-        setVideos(Array.isArray(data.videos) ? data.videos : []);
+        const res = await fetch(
+          `/api/video/allvideos?page=${page}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(search)}`
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch videos");
+
+        const data = await res.json();
+        const fetchedVideos = Array.isArray(data.videos) ? data.videos : [];
+
+        setVideos(fetchedVideos);
         setTotalPages(
           Math.max(1, Math.ceil((data.total || 0) / ITEMS_PER_PAGE))
         );
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setError(true);
+        setError(err.message || "Error loading videos");
         setVideos([]);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
     };
 
     fetchVideos();
-  }, [page, search]);
+  }, [search, page]);
 
-  // Reset to page 1 when search changes
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
-  // Trigger search on button click or Enter
+  // Reset to page 1 when new search is triggered
   const handleSearch = () => {
-    setSearch(searchInput.trim());
+    if (searchInput.trim() !== search) {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }
   };
 
   return (
@@ -63,6 +64,7 @@ export default function VideosPage() {
         All Videos
       </h1>
 
+      {/* Search bar and button */}
       <div className="flex items-center gap-2">
         <SearchBar
           value={searchInput}
@@ -77,27 +79,30 @@ export default function VideosPage() {
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-center mt-6">Loading videos...</p>
-      ) : error ? (
-        <p className="text-center mt-6 text-red-600">Error loading videos</p>
-      ) : videos.length === 0 ? (
-        <p className="text-center mt-6">No videos found</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 mt-6">
-            {videos.map((video) => (
-              <VideoCard key={video.id} video={video} />
-            ))}
-          </div>
+      {/* Content display */}
+      <div className="mt-6">
+        {loading ? (
+          <p className="text-center">Loading videos...</p>
+        ) : error ? (
+          <p className="text-center text-red-600">{error}</p>
+        ) : videos.length === 0 ? (
+          <p className="text-center">No videos found</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {videos.map((video) => (
+                <VideoCard key={video.id} video={video} />
+              ))}
+            </div>
 
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
-        </>
-      )}
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }

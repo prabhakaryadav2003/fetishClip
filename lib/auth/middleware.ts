@@ -7,6 +7,7 @@ import {
   insertVideo,
   deleteVideo,
   getPublicVideos,
+  getUserSubscriptionStatus,
 } from "@/lib/db/queries";
 import { redirect } from "next/navigation";
 import type { User } from "@/lib/db/schema";
@@ -67,7 +68,8 @@ export function withActiveUser<T>(action: ActionWithActiveUserFunction<T>) {
   return async (formData: FormData): Promise<T> => {
     const user = await getUser();
     if (!user || user.deletedAt) redirect("/sign-in");
-    if (user.subscriptionStatus !== "active") {
+    const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+    if (subscriptionStatus !== "ACTIVE") {
       redirect("/subscribe");
     }
     return action(formData, user);
@@ -87,7 +89,8 @@ export function validatedActionWithActiveUser<S extends z.ZodTypeAny, T>(
   return async (prevState: ActionState, formData: FormData) => {
     const user = await getUser();
     if (!user || user.deletedAt) redirect("/sign-in");
-    if (user.subscriptionStatus !== "active") redirect("/subscribe");
+    const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+    if (subscriptionStatus !== "ACTIVE") redirect("/subscribe");
     const parsed = schema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) {
       return { error: parsed.error.errors[0]?.message || "Invalid input." };
@@ -102,8 +105,9 @@ export function isCreator(user: User) {
 }
 
 // Check if a user has an active subscription
-export function isActiveSubscriber(user: User) {
-  return user.subscriptionStatus === "active";
+export async function isActiveSubscriber(user: User) {
+  const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+  return subscriptionStatus;
 }
 
 // List all videos

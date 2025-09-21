@@ -1,7 +1,7 @@
 "use client";
 
 import VideoCard from "@/components/VideoCard";
-import { VideoData } from "@/lib/video/videoData";
+import { VideoData } from "@/types/videoData";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
