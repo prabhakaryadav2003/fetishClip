@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { ActivityType } from "@/lib/db/schema";
-import getUserActivity from "./action";
+import { getActivityLogs } from "@/lib/db/queries";
 
 // Mapping of activity types to corresponding icons
 const iconMap: Record<ActivityType, React.ElementType> = {
@@ -88,7 +88,7 @@ function formatAction(actionRaw: string): string {
 }
 
 export default async function ActivityPage() {
-  const logs = await getUserActivity();
+  const logs = await getActivityLogs();
 
   return (
     <section className="flex-1 p-4 lg:p-8">
