@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, and, eq, isNull, sql } from "drizzle-orm";
+import { desc, and, eq, or, isNull, sql } from "drizzle-orm";
 import { db } from "./drizzle";
 import {
   activityLogs,
@@ -15,6 +15,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 import { VideoData } from "@/types/videoData";
 import { v4 as uuidv4 } from "uuid";
+import { redirect } from "next/navigation";
 
 /**
  * Helper: returns current timestamp for consistency
@@ -90,7 +91,15 @@ export async function getUser() {
   const user = await db
     .select()
     .from(users)
-    .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
+    .where(
+      and(
+        eq(users.id, sessionData.user.id),
+        or(
+          isNull(users.deletedAt),
+          eq(users.deletedAt, sql`'0000-00-00 00:00:00'`)
+        )
+      )
+    )
     .limit(1);
 
   return user[0] ?? null;
@@ -463,7 +472,7 @@ export async function deleteVideo(id: string) {
  */
 export async function getActivityLogs() {
   const user = await getUser();
-  if (!user) throw new Error("User not authenticated");
+  if (!user) return [];
 
   return db
     .select({

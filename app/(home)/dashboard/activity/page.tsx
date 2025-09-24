@@ -1,5 +1,3 @@
-"use client";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Settings,
@@ -16,6 +14,7 @@ import {
 } from "lucide-react";
 import { ActivityType } from "@/lib/db/schema";
 import { getActivityLogs } from "@/lib/db/queries";
+import { redirect } from "next/navigation";
 
 // Mapping of activity types to corresponding icons
 const iconMap: Record<ActivityType, React.ElementType> = {
