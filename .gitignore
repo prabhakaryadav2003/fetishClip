@@ -18,6 +18,7 @@
 
 # videos
 video-stream/
+thumbnail/
 
 # misc
 .DS_Store
