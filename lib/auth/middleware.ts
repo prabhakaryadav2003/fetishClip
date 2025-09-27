@@ -139,8 +139,21 @@ export async function listPublicVideosAction() {
 // List uploaded videos (for creators)
 export async function listMyVideosAction() {
   const user = await getUser();
-  if (!user || !isCreator(user)) redirect("/not-authorized");
-  return getVideosByCreator(user.id);
+  // Ensure a user is provided (from server session or auth token)
+  if (!user || !isCreator(user)) {
+    // Stop execution and prevent any data leakage
+    return {
+      success: false,
+      message: "Unauthorized access. Please subscribe or upgrade your account.",
+      data: [],
+    };
+  }
+
+  const videos = await getVideosByCreator(user.id);
+  return {
+    success: true,
+    data: videos,
+  };
 }
 
 // Add video
