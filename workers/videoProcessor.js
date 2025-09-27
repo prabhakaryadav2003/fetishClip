@@ -11,12 +11,7 @@ const videoDir = path.join(outputDir, title);
 fs.mkdirSync(videoDir, { recursive: true });
 
 // Path to local FFmpeg static binary
-const ffmpegPath = path
-  .join(
-    "ffmpeg-7.0.2-amd64-static",
-    process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg"
-  )
-  .replace(/\\/g, "/");
+const ffmpegPath = path.join("", "ffmpeg").replace(/\\/g, "/");
 
 // Bitrate / resolution variants
 const variants = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { X } from "lucide-react";
 import { FileDrop } from "./FileDrop";
 import { VideoForm } from "@/types/global";
@@ -9,20 +9,22 @@ interface VideoModalProps {
   form: VideoForm;
   setForm: Dispatch<SetStateAction<VideoForm>>;
   formErrors: Partial<Record<keyof VideoForm, string>>;
-  handleUpload: () => void;
   resetForm: () => void;
   isEditing: string | null;
+  progress: number;
   isUploading: boolean;
+  handleUpload: () => void;
 }
 
 function VideoModal({
   form,
   setForm,
   formErrors,
-  handleUpload,
   resetForm,
   isEditing,
+  progress,
   isUploading,
+  handleUpload,
 }: VideoModalProps) {
   return (
     <div
@@ -123,6 +125,16 @@ function VideoModal({
             }))
           }
         />
+
+        {/* Progress Bar */}
+        {isUploading && (
+          <div className="w-full bg-gray-200 rounded h-3 mt-3">
+            <div
+              className="bg-red-600 h-3 rounded"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 mt-6">

@@ -83,12 +83,6 @@ export async function POST(req: any) {
       });
     });
 
-    // cleanup on client abort
-    req.on("aborted", async () => {
-      await logToFile("Upload aborted by client");
-      filesToCleanup.forEach((p) => fs.existsSync(p) && fs.unlinkSync(p));
-    });
-
     busboy.on("finish", async () => {
       try {
         await logToFile("Parsed fields:", {
@@ -127,7 +121,7 @@ export async function POST(req: any) {
               title: safeTitle,
               description,
               url: `/video-stream/${safeTitle}/master.m3u8`,
-              thumbnail: `/thumbnail/${safeTitle}.jpg`,
+              thumbnail: `thumbnail/${safeTitle}.jpg`,
               tags,
             });
           } else if (msg.status === "error") {
@@ -147,7 +141,7 @@ export async function POST(req: any) {
           NextResponse.json({
             status: "processing",
             title: safeTitle,
-            thumbnailUrl: `/thumbnail/${safeTitle}.jpg`,
+            thumbnailUrl: `thumbnail/${safeTitle}.jpg`,
           })
         );
       } catch (err: any) {

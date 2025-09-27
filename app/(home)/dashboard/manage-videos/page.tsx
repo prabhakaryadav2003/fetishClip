@@ -13,7 +13,7 @@ import { AdminVideoCard } from "@/components/AdminVideoCard";
 const MAX_THUMBNAIL_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
 
-// Schema for validation (client-side only)
+// Schema for client-side validation
 const videoSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -40,6 +40,7 @@ export default function VideoManagementPage() {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const router = useRouter();
 
@@ -77,10 +78,11 @@ export default function VideoManagementPage() {
     setFormErrors({});
     setIsEditing(null);
     setShowModal(false);
+    setProgress(0);
   };
 
-  // Upload or update video
-  const handleUpload = async () => {
+  // Upload or update video (with progress)
+  const handleUpload = () => {
     const tagsArray = (form.tagsInput || "")
       .split(",")
       .map((t) => t.trim())
@@ -113,33 +115,39 @@ export default function VideoManagementPage() {
     formData.append("thumbnail", thumbnail);
     formData.append("videoFile", videoFile);
 
-    try {
-      setIsUploading(true);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/video/upload");
 
-      const res = await fetch("/api/video/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "Upload failed");
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setProgress(percent);
       }
+    };
 
-      const data = await res.json();
-      if (data?.error) {
-        alert(`Upload failed: ${data.error}`);
-        return;
-      }
-
-      resetForm();
-      loadVideos();
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      alert(err.message || "Upload failed");
-    } finally {
+    xhr.onload = () => {
       setIsUploading(false);
-    }
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        if (data?.error) {
+          alert(`Upload failed: ${data.error}`);
+        } else {
+          alert("Uploaded, Wait for some time to process video!");
+          resetForm();
+          loadVideos();
+        }
+      } else {
+        alert(`Upload failed: ${xhr.responseText}`);
+      }
+    };
+
+    xhr.onerror = () => {
+      setIsUploading(false);
+      alert("Upload failed due to network error");
+    };
+
+    setIsUploading(true);
+    xhr.send(formData);
   };
 
   // Handle video update from child component
@@ -210,6 +218,7 @@ export default function VideoManagementPage() {
           resetForm={resetForm}
           isEditing={isEditing}
           isUploading={isUploading}
+          progress={progress}
         />
       )}
     </div>
