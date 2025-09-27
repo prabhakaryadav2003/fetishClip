@@ -91,15 +91,7 @@ export async function getUser() {
   const user = await db
     .select()
     .from(users)
-    .where(
-      and(
-        eq(users.id, sessionData.user.id),
-        or(
-          isNull(users.deletedAt),
-          eq(users.deletedAt, sql`'0000-00-00 00:00:00'`)
-        )
-      )
-    )
+    .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
     .limit(1);
 
   return user[0] ?? null;

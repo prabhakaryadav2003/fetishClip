@@ -20,7 +20,7 @@ export default function PrivacyPage() {
               required), and securely hashed passwords.
             </li>
             <li>
-              Payment data processed by third-parties (e.g., Stripe); we do not
+              Payment data processed by third-parties (e.g., Paypal); we do not
               store full payment info.
             </li>
             <li>
