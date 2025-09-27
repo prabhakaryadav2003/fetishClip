@@ -1,51 +1,158 @@
 const { parentPort, workerData } = require("worker_threads");
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
+// Destructure worker data
 const { inputPath, title, outputDir } = workerData;
-const videoDir = path.join(outputDir, title);
 
-// Create output folders
+// Define the video output folder
+const videoDir = path.join(outputDir, title);
 fs.mkdirSync(videoDir, { recursive: true });
 
-function runCommand(cmd) {
+// Path to local FFmpeg static binary
+const ffmpegPath = path
+  .join(
+    "ffmpeg-7.0.2-amd64-static",
+    process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg"
+  )
+  .replace(/\\/g, "/");
+
+// Bitrate / resolution variants
+const variants = [
+  {
+    name: "1080p",
+    width: 1920,
+    height: 1080,
+    videoBitrate: "5400k",
+    audioBitrate: "192k",
+  },
+  {
+    name: "720p",
+    width: 1280,
+    height: 720,
+    videoBitrate: "3000k",
+    audioBitrate: "128k",
+  },
+  {
+    name: "480p",
+    width: 854,
+    height: 480,
+    videoBitrate: "1500k",
+    audioBitrate: "128k",
+  },
+];
+
+// Create per-variant folders
+variants.forEach((v) =>
+  fs.mkdirSync(path.join(videoDir, v.name), { recursive: true })
+);
+
+// Log file
+const logFilePath = path.join(videoDir, "ffmpeg.log");
+
+function runFFmpeg(cmdArgs, logFile) {
   return new Promise((resolve, reject) => {
-    exec(cmd, (err, stdout, stderr) => {
-      if (err) reject(stderr || stdout || err.message);
-      else resolve();
+    const logStream = fs.createWriteStream(logFile, { flags: "a" });
+
+    const ffmpeg = spawn(ffmpegPath, cmdArgs, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    ffmpeg.stdout.pipe(logStream, { end: false });
+    ffmpeg.stderr.pipe(logStream, { end: false });
+
+    ffmpeg.on("close", (code) => {
+      logStream.write(`\n==== FFmpeg exited with code ${code} ====\n`);
+      logStream.end();
+      if (code === 0) resolve();
+      else reject(new Error(`FFmpeg exited with code ${code}`));
+    });
+
+    ffmpeg.on("error", (err) => {
+      logStream.write(`\n==== FFmpeg error: ${err.message} ====\n`);
+      logStream.end();
+      reject(err);
     });
   });
 }
 
-async function convertToHLS() {
-  console.log("Working");
-
-  // Use path.normalize to make Windows-compatible paths
+async function convertVariant(v, idx) {
   const input = path.normalize(inputPath);
-  const output = path.normalize(videoDir);
+  const outputFolder = path.join(videoDir, v.name);
+  fs.mkdirSync(outputFolder, { recursive: true });
 
-  const cmd =
-    `ffmpeg -i "${input}" ` +
-    `-filter_complex "` +
-    `[0:v]split=3[v1][v2][v3];` +
-    `[v1]scale=w=1920:h=1080:force_original_aspect_ratio=decrease:force_divisible_by=2[v1out];` +
-    `[v2]scale=w=1280:h=720:force_original_aspect_ratio=decrease:force_divisible_by=2[v2out];` +
-    `[v3]scale=w=854:h=480:force_original_aspect_ratio=decrease:force_divisible_by=2[v3out]" ` +
-    `-map "[v1out]" -map a -c:v:0 h264 -b:v:0 5400k -maxrate:v:0 5400k -bufsize:v:0 10800k -preset veryfast -c:a:0 aac -b:a:0 128k ` +
-    `-map "[v2out]" -map a -c:v:1 h264 -b:v:1 3000k -maxrate:v:1 3000k -bufsize:v:1 6000k -preset veryfast -c:a:1 aac -b:a:1 128k ` +
-    `-map "[v3out]" -map a -c:v:2 h264 -b:v:2 1500k -maxrate:v:2 1500k -bufsize:v:2 3000k -preset veryfast -c:a:2 aac -b:a:2 128k ` +
-    `-var_stream_map "v:0,a:0 v:1,a:1 v:2,a:2" ` +
-    `-master_pl_name master.m3u8 ` +
-    `-f hls -hls_time 4 -hls_list_size 0 ` +
-    `-hls_segment_filename "${output}\\v%v\\seg_%03d.ts" "${output}\\v%v\\prog.m3u8"`;
+  const hlsSegmentPath = path
+    .join(outputFolder, "seg_%03d.ts")
+    .replace(/\\/g, "/");
+  const hlsPlaylistPath = path
+    .join(outputFolder, "prog.m3u8")
+    .replace(/\\/g, "/");
 
+  const filterComplex = `[0:v]scale=w=${v.width}:h=${v.height}:force_original_aspect_ratio=decrease:force_divisible_by=2[v]`;
+
+  const cmdArgs = [
+    "-i",
+    input,
+    "-filter_complex",
+    filterComplex,
+    "-map",
+    "[v]",
+    "-map",
+    "a",
+    "-c:v",
+    "libx264",
+    "-b:v",
+    v.videoBitrate,
+    "-maxrate",
+    v.videoBitrate,
+    "-bufsize",
+    `${parseInt(v.videoBitrate) * 2}k`,
+    "-preset",
+    "veryfast",
+    "-c:a",
+    "aac",
+    "-b:a",
+    v.audioBitrate,
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    hlsSegmentPath,
+    hlsPlaylistPath,
+  ];
+
+  await runFFmpeg(cmdArgs, logFilePath);
+}
+
+async function convertToHLS() {
   try {
-    await runCommand(cmd);
-    parentPort.postMessage({ status: "done", dir: videoDir });
+    console.log(`Starting HLS conversion for ${title}`);
+
+    // Encode each variant sequentially to reduce memory/CPU usage
+    for (let i = 0; i < variants.length; i++) {
+      console.log(`Encoding variant: ${variants[i].name}`);
+      await convertVariant(variants[i], i);
+    }
+
+    parentPort.postMessage({ status: "done", dir: videoDir, log: logFilePath });
   } catch (err) {
-    parentPort.postMessage({ status: "error", error: err });
+    parentPort.postMessage({
+      status: "error",
+      error: err.message,
+      log: logFilePath,
+    });
   }
 }
 
-convertToHLS();
+// Start conversion safely
+(async () => {
+  try {
+    await convertToHLS();
+  } catch (err) {
+    parentPort.postMessage({ status: "error", error: err.message });
+  }
+})();
