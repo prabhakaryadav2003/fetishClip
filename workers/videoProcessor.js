@@ -25,14 +25,14 @@ const variants = [
     width: 1920,
     height: 1080,
     videoBitrate: "5400k",
-    audioBitrate: "192k",
+    audioBitrate: "384k",
   },
   {
     name: "720p",
     width: 1280,
     height: 720,
     videoBitrate: "3000k",
-    audioBitrate: "128k",
+    audioBitrate: "256k",
   },
   {
     name: "480p",
@@ -43,18 +43,17 @@ const variants = [
   },
 ];
 
-// Create per-variant folders
-variants.forEach((v) =>
-  fs.mkdirSync(path.join(videoDir, v.name), { recursive: true })
+// Create per-variant folders (v0, v1, v2)
+variants.forEach((v, i) =>
+  fs.mkdirSync(path.join(videoDir, `v${i}`), { recursive: true })
 );
 
 // Log file
 const logFilePath = path.join(videoDir, "ffmpeg.log");
 
-function runFFmpeg(cmdArgs, logFile) {
+function runFFmpeg(cmdArgs) {
   return new Promise((resolve, reject) => {
-    const logStream = fs.createWriteStream(logFile, { flags: "a" });
-
+    const logStream = fs.createWriteStream(logFilePath, { flags: "a" });
     const ffmpeg = spawn(ffmpegPath, cmdArgs, {
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -77,9 +76,10 @@ function runFFmpeg(cmdArgs, logFile) {
   });
 }
 
+// Encode a single variant
 async function convertVariant(v, idx) {
   const input = path.normalize(inputPath);
-  const outputFolder = path.join(videoDir, v.name);
+  const outputFolder = path.join(videoDir, `v${idx}`);
   fs.mkdirSync(outputFolder, { recursive: true });
 
   const hlsSegmentPath = path
@@ -110,8 +110,12 @@ async function convertVariant(v, idx) {
     `${parseInt(v.videoBitrate) * 2}k`,
     "-preset",
     "veryfast",
+    "-threads",
+    "4", // Limit CPU threads
     "-c:a",
     "aac",
+    "-ac",
+    "6", // 5.1 audio
     "-b:a",
     v.audioBitrate,
     "-f",
@@ -125,18 +129,28 @@ async function convertVariant(v, idx) {
     hlsPlaylistPath,
   ];
 
-  await runFFmpeg(cmdArgs, logFilePath);
+  await runFFmpeg(cmdArgs);
 }
 
+// Main conversion loop (step-by-step)
 async function convertToHLS() {
   try {
     console.log(`Starting HLS conversion for ${title}`);
 
-    // Encode each variant sequentially to reduce memory/CPU usage
     for (let i = 0; i < variants.length; i++) {
       console.log(`Encoding variant: ${variants[i].name}`);
       await convertVariant(variants[i], i);
     }
+
+    // Generate master playlist after all variants are done
+    const masterPl = path.join(videoDir, "master.m3u8");
+    const masterContent = variants
+      .map(
+        (v, i) =>
+          `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(v.videoBitrate) * 1000},RESOLUTION=${v.width}x${v.height}\nv${i}/prog.m3u8`
+      )
+      .join("\n");
+    fs.writeFileSync(masterPl, `#EXTM3U\n${masterContent}`);
 
     parentPort.postMessage({ status: "done", dir: videoDir, log: logFilePath });
   } catch (err) {
