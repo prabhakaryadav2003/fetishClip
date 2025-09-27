@@ -61,7 +61,7 @@ export async function setSession(user: { id: number }) {
   cookieStore.set("session", encryptedSession, {
     expires: expiresInOneDay,
     httpOnly: true,
-    secure: true,
+    secure: false,
     sameSite: "lax",
     path: "/",
   });
