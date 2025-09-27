@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
-import fs from "fs/promises";
+import fs from "fs";
+import Busboy from "busboy";
 import { Worker } from "worker_threads";
 import { slugify } from "@/lib/utils";
 import { addVideoAction } from "@/lib/auth/middleware";
@@ -17,109 +18,165 @@ async function logToFile(...args: any[]) {
       .map((a) => (typeof a === "object" ? JSON.stringify(a, null, 2) : a))
       .join(" ") +
     "\n";
-  await fs.appendFile(DEBUG_LOG, message);
+  await fs.promises.appendFile(DEBUG_LOG, message);
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
+export const config = {
+  api: {
+    bodyParser: false, // disable built-in parser for streaming
+  },
+};
 
+export async function POST(req: any) {
+  return new Promise(async (resolve) => {
     await logToFile("=== New upload started ===");
-    for (const [key, value] of formData.entries()) {
-      await logToFile(
-        "FormData entry:",
-        key,
-        value instanceof File ? value.name : value
-      );
-    }
 
-    const rawTitle = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const tags =
-      (formData.get("tags") as string)
-        ?.split(",")
-        .map((t) => t.trim())
-        .filter(Boolean) ?? [];
-    const thumbnailFile = formData.get("thumbnail") as File;
-    const videoFile = formData.get("videoFile") as File;
+    if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
+    if (!fs.existsSync(BACKUP_DIR))
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-    await logToFile("Parsed fields:", {
-      rawTitle,
-      description,
-      tags,
-      thumbnailFile: thumbnailFile?.name,
-      videoFile: videoFile?.name,
+    const headers = Object.fromEntries(req.headers);
+    const busboy = Busboy({ headers });
+
+    let rawTitle = "";
+    let description = "";
+    let tags: string[] = [];
+    let safeTitle = "";
+    let thumbPath = "";
+    let videoPath = "";
+
+    const filesToCleanup: string[] = [];
+
+    busboy.on("field", (fieldname, val) => {
+      if (fieldname === "title") rawTitle = val;
+      if (fieldname === "description") description = val;
+      if (fieldname === "tags")
+        tags = val
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
     });
 
-    if (!rawTitle || !description || !thumbnailFile || !videoFile) {
-      await logToFile("Error: Missing required fields");
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    busboy.on("file", (fieldname, file, filename) => {
+      if (!safeTitle) {
+        safeTitle = slugify(String(rawTitle || filename));
+      }
 
-    const safeTitle = slugify(rawTitle);
+      if (fieldname === "thumbnail") {
+        thumbPath = path.join(THUMB_DIR, `${safeTitle}.jpg`);
+        filesToCleanup.push(thumbPath);
+        const out = fs.createWriteStream(thumbPath);
+        file.pipe(out);
+      }
 
-    await fs.mkdir(THUMB_DIR, { recursive: true });
-    await fs.mkdir(BACKUP_DIR, { recursive: true });
+      if (fieldname === "videoFile") {
+        const ext = path.extname(String(filename)) || ".mp4";
+        videoPath = path.join(BACKUP_DIR, `${safeTitle}_${Date.now()}${ext}`);
+        filesToCleanup.push(videoPath);
+        const out = fs.createWriteStream(videoPath);
+        file.pipe(out);
+      }
 
-    const thumbPath = path.join(THUMB_DIR, `${safeTitle}.jpg`);
-    await fs.writeFile(
-      thumbPath,
-      Buffer.from(await thumbnailFile.arrayBuffer())
-    );
-    await logToFile("Thumbnail saved:", thumbPath);
-
-    const ext = path.extname(videoFile.name) || ".mp4";
-    const tempVideoPath = path.join(
-      BACKUP_DIR,
-      `${safeTitle}_${Date.now()}${ext}`
-    );
-    await fs.writeFile(
-      tempVideoPath,
-      Buffer.from(await videoFile.arrayBuffer())
-    );
-    await logToFile("Video backup saved:", tempVideoPath);
-
-    const worker = new Worker(path.resolve("./workers/videoProcessor.js"), {
-      workerData: {
-        inputPath: tempVideoPath,
-        title: safeTitle,
-        outputDir: VIDEO_DIR,
-      },
+      file.on("error", async (err) => {
+        await logToFile("File stream error:", err);
+        filesToCleanup.forEach((p) => fs.existsSync(p) && fs.unlinkSync(p));
+      });
     });
 
-    worker.once("message", async (msg) => {
-      await logToFile("Worker message:", msg);
-      if (msg.status === "done") {
-        await addVideoAction({
-          title: safeTitle,
+    // cleanup on client abort
+    req.on("aborted", async () => {
+      await logToFile("Upload aborted by client");
+      filesToCleanup.forEach((p) => fs.existsSync(p) && fs.unlinkSync(p));
+    });
+
+    busboy.on("finish", async () => {
+      try {
+        await logToFile("Parsed fields:", {
+          rawTitle,
           description,
-          url: `/video-stream/${safeTitle}/master.m3u8`,
-          thumbnail: `/thumbnail/${safeTitle}.jpg`,
           tags,
+          thumbPath,
+          videoPath,
         });
-      } else if (msg.status === "error") {
-        await logToFile("Video processing failed:", msg.error);
+
+        if (!rawTitle || !description || !thumbPath || !videoPath) {
+          filesToCleanup.forEach((p) => fs.existsSync(p) && fs.unlinkSync(p));
+          await logToFile("Error: Missing required fields");
+          resolve(
+            NextResponse.json(
+              { error: "Missing required fields" },
+              { status: 400 }
+            )
+          );
+          return;
+        }
+
+        // Start your worker thread
+        const worker = new Worker(path.resolve("./workers/videoProcessor.js"), {
+          workerData: {
+            inputPath: videoPath,
+            title: safeTitle,
+            outputDir: VIDEO_DIR,
+          },
+        });
+
+        worker.once("message", async (msg) => {
+          await logToFile("Worker message:", msg);
+          if (msg.status === "done") {
+            await addVideoAction({
+              title: safeTitle,
+              description,
+              url: `/video-stream/${safeTitle}/master.m3u8`,
+              thumbnail: `/thumbnail/${safeTitle}.jpg`,
+              tags,
+            });
+          } else if (msg.status === "error") {
+            await logToFile("Video processing failed:", msg.error);
+          }
+        });
+
+        worker.once(
+          "error",
+          async (err) => await logToFile("Worker error:", err)
+        );
+        worker.once("exit", async (code) => {
+          if (code !== 0) await logToFile("Worker exit code:", code);
+        });
+
+        resolve(
+          NextResponse.json({
+            status: "processing",
+            title: safeTitle,
+            thumbnailUrl: `/thumbnail/${safeTitle}.jpg`,
+          })
+        );
+      } catch (err: any) {
+        filesToCleanup.forEach((p) => fs.existsSync(p) && fs.unlinkSync(p));
+        await logToFile("Upload error:", err.message ?? err);
+        resolve(
+          NextResponse.json(
+            { error: err.message ?? "Upload failed" },
+            { status: 500 }
+          )
+        );
       }
     });
 
-    worker.once("error", async (err) => await logToFile("Worker error:", err));
-    worker.once("exit", async (code) => {
-      if (code !== 0) await logToFile("Worker exit code:", code);
-    });
-
-    return NextResponse.json({
-      status: "processing",
-      title: safeTitle,
-      thumbnailUrl: `/thumbnail/${safeTitle}.jpg`,
-    });
-  } catch (err: any) {
-    await logToFile("Upload error:", err.message ?? err);
-    return NextResponse.json(
-      { error: err.message ?? "Upload failed" },
-      { status: 500 }
-    );
-  }
+    // pipe request body to busboy
+    if (req.body && typeof (req.body as any).pipe === "function") {
+      (req.body as any).pipe(busboy);
+    } else {
+      // handle Web Streams (Next 13 Request.body is a ReadableStream)
+      const reader = req.body.getReader();
+      const { Readable } = require("stream");
+      const nodeStream = new Readable({
+        async read() {
+          const { done, value } = await reader.read();
+          if (done) this.push(null);
+          else this.push(value);
+        },
+      });
+      nodeStream.pipe(busboy);
+    }
+  });
 }
